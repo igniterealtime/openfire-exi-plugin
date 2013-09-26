@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:="jabber:x:event">
+
+	<!-- definition of simple elements -->
+	<xs:element name="body" type="xs:string"/>
+	<xs:element name="thread" type="xs:string"/>
+	<xs:element name="offline"/>
+    <xs:element name="composing"/>
+	
+	<!-- definition of attributes -->
+	<xs:attribute name="id" type="xs:string" />
+	<xs:attribute name="to" type="xs:string"/>
+	<xs:attribute name="from" type="xs:string"/>
+	<xs:attribute name="type" type="xs:string"/>
+	
+	<!-- definition of complex elements -->
+	<xs:element name="x">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="offline" minOccurs="0" type="empty"/>
+				<xs:element name="delivered" minOccurs="0" type="empty"/>
+				<xs:element name="displayed" minOccurs="0" type="empty"/>
+				<xs:element name="composing" minOccurs="0" type="empty"/>
+				<xs:element name="id" minOccurs="0" type="xs:NMTOKEN"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	
+	<xs:element name="message">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="body"/>
+				<xs:element ref="thread"/>
+				<xs:element ref="x"/>
+         </xs:sequence>
+         <xs:attribute ref="id"/>
+		 <xs:attribute ref="to"/>
+		 <xs:attribute ref="from"/>
+		 <xs:attribute ref="type"/>
+      </xs:complexType>
+   </xs:element>
+   
+</xs:schema>
+
