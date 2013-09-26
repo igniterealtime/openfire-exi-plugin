@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin>
+    <!-- Main plugin class -->
+    <class>cl.clayster.exi.EXIPlugin</class>
+
+    <!-- Plugin meta-data -->
+    <name>EXI</name>
+    <description>EXI over XMPP.</description>
+    <author>Javier Placencio</author>
+
+    <version>0.1</version>
+    <date>08/06/2013</date>
+    <!--url>http://www.igniterealtime.org/projects/openfire/plugins.jsp</url-->
+    <minServerVersion>3.8.2</minServerVersion>
+    <licenseType>gpl</licenseType>
+
+</plugin>
