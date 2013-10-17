@@ -11,24 +11,21 @@ import org.jivesoftware.openfire.spi.ConnectionManagerImpl;
 
 public class EXIPlugin implements Plugin{
 	EXIFilter exiFilter;
-	EXIEncoderInterceptor exiEncoderInterceptor;
-	EXIInterceptor exiInterceptor;
+	static EXIEncoderInterceptor exiEncoderInterceptor;
 
 	@Override
 	public void initializePlugin(PluginManager manager, File pluginDirectory) {
 		// Add filter to filter chain builder
         ConnectionManagerImpl connManager = (ConnectionManagerImpl) XMPPServer.getInstance().getConnectionManager();
-        exiFilter = new EXIFilter();
+        exiFilter = new EXIFilter(exiEncoderInterceptor);
         SocketAcceptor socketAcceptor = connManager.getSocketAcceptor();
-        exiEncoderInterceptor = new EXIEncoderInterceptor(exiFilter);
+        exiEncoderInterceptor = new EXIEncoderInterceptor();
         
         if (socketAcceptor != null) {
-        	socketAcceptor.getFilterChain().addBefore("xmpp", "exiFilter", exiFilter);
+        	socketAcceptor.getFilterChain().addLast(EXIFilter.filterName, exiFilter);
         }
         InterceptorManager.getInstance().addInterceptor(exiEncoderInterceptor);
         // TODO: agregar el EXIEncoderInterceptor asociado a la conexión, y removerla al cerrar la conexión!
-        exiInterceptor = new EXIInterceptor(exiFilter);
-        InterceptorManager.getInstance().addInterceptor(exiInterceptor);
         
         System.out.println("EXIPlugin Started!");
 	}

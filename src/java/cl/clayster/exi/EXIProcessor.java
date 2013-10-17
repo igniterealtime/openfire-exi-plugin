@@ -29,34 +29,22 @@ import com.siemens.ct.exi.helpers.DefaultEXIFactory;
 
 public class EXIProcessor {
 	
-	public static final String xsdLocation = "C:\\Users\\Javier\\Documents\\UTFSM\\Memoria - XMPP\\Softwares\\Exifficient\\bundle\\sample-data\\jabber-client.xsd";
 	public static final String CHARSET = "ISO-8859-1";
 	
-	public Grammars g; 
+	static EXIFactory exiFactory;
+	static EXIResult exiResult;
+	static SAXSource exiSource;
 	
-	public EXIProcessor(String xsdLocation){
-		GrammarFactory grammarFactory = GrammarFactory.newInstance();
-		try {
-			this.g = grammarFactory.createGrammars(xsdLocation);
-		} catch (EXIException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public Grammars createGrammars(String xsdLocation) throws EXIException{
-		GrammarFactory grammarFactory = GrammarFactory.newInstance();
-		this.g = grammarFactory.createGrammars(xsdLocation);
-		return g;
-	}
-	
-	public ByteBuffer encodeByteBuffer(String xml) throws IOException, EXIException, SAXException, TransformerException{
+	public EXIProcessor(String xsdLocation) throws EXIException{
 		// create default factory and EXI grammar for schema
-		EXIFactory exiFactory = DefaultEXIFactory.newInstance();
+		exiFactory = DefaultEXIFactory.newInstance();
 		exiFactory.setFidelityOptions(FidelityOptions.createAll());
 		GrammarFactory grammarFactory = GrammarFactory.newInstance();
 		Grammars g = grammarFactory.createGrammars(xsdLocation);
 		exiFactory.setGrammars(g);
-		
+	}
+	
+	public ByteBuffer encodeByteBuffer(String xml) throws IOException, EXIException, SAXException, TransformerException{
 		// encoding
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		EXIResult exiResult = new EXIResult(exiFactory);		
@@ -69,13 +57,6 @@ public class EXIProcessor {
 	}
 	
 	public String encodeString(String xml) throws IOException, EXIException, SAXException, TransformerException{
-		// create default factory and EXI grammar for schema
-		EXIFactory exiFactory = DefaultEXIFactory.newInstance();
-		exiFactory.setFidelityOptions(FidelityOptions.createAll());
-		GrammarFactory grammarFactory = GrammarFactory.newInstance();
-		Grammars g = grammarFactory.createGrammars(xsdLocation);
-		exiFactory.setGrammars(g);
-		
 		// encoding
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		EXIResult exiResult = new EXIResult(exiFactory);		
@@ -95,13 +76,6 @@ public class EXIProcessor {
      * @throws EXIException if it is a not well formed EXI document
      */
 	public String decode(String exi) throws SAXException, TransformerException, EXIException, IOException{
-		// create default factory and EXI grammar for schema
-		EXIFactory exiFactory = DefaultEXIFactory.newInstance();
-		exiFactory.setFidelityOptions(FidelityOptions.createAll());
-		//GrammarFactory grammarFactory = GrammarFactory.newInstance();
-		//Grammars g = grammarFactory.createGrammars(xsdLocation);
-		exiFactory.setGrammars(g);
-		
 		// decoding		
 		SAXSource exiSource = new EXISource(exiFactory);
 		XMLReader exiReader = exiSource.getXMLReader();
@@ -128,13 +102,6 @@ public class EXIProcessor {
      * @throws EXIException if it is a not well formed EXI document
      */
 	public String decode(byte[] exiBytes) throws SAXException, TransformerException, EXIException, IOException{
-		// create default factory and EXI grammar for schema
-		EXIFactory exiFactory = DefaultEXIFactory.newInstance();
-		exiFactory.setFidelityOptions(FidelityOptions.createAll());
-		//GrammarFactory grammarFactory = GrammarFactory.newInstance();
-		//Grammars g = grammarFactory.createGrammars(xsdLocation);
-		exiFactory.setGrammars(g);
-		
 		// decoding		
 		SAXSource exiSource = new EXISource(exiFactory);
 		XMLReader exiReader = exiSource.getXMLReader();

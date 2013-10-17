@@ -19,42 +19,36 @@ public class EXIEncoderInterceptor implements PacketInterceptor{
 	
 	//private HashMap<String, EXIProcessor> exiProcessors = new HashMap<String, EXIProcessor>();
 	private HashMap<JID, EXIProcessor> exiProcessors = new HashMap<JID, EXIProcessor>();	// each EXI-receiver has its own EXIProcessor
-	EXIFilter exiFilter;
 	
-	public EXIEncoderInterceptor(EXIFilter exiFilter) {
-		this.exiFilter = exiFilter;
-	}
+	public EXIEncoderInterceptor() {}
     
 	@Override
 	public void interceptPacket(Packet packet, Session session, boolean incoming, boolean processed) throws PacketRejectedException {
-		if(exiFilter != null){
-			if(incoming && processed){
-				// TODO: identificar el <setup> stanza para hacer la negociación, y aceptar (marcar sesión como EXI) o rechazar la conexión EXI
-				
-				// se crea un nuevo EXIProcessor para esta sesión (identificada con el getFrom)
-				if(exiFilter.newExiProcessorXsdLocation != null){	
-					exiProcessors.put(packet.getFrom(), new EXIProcessor(exiFilter.newExiProcessorXsdLocation));
-					//exiProcessors.put(session.getStreamID().getID(), new EXIProcessor(exiFilter.newExiProcessorXsdLocation));
-					exiFilter.newExiProcessorXsdLocation = null;
-				}
-			}
-			if(!incoming && !processed && exiProcessors.containsKey(packet.getTo())){
-				// codificar
-				String exi = null;
-				try {
-					exi = exiProcessors.get(packet.getTo()).encodeString(packet.toXML());
-				} catch (IOException | EXIException | SAXException | TransformerException e) {
-					e.printStackTrace();
-				} 
-				if(exi != null)
-					session.deliverRawText(exi);
-				System.out.println("XML: " + packet.toXML());
-				System.out.println("EXI: " + exi);
-				throw new PacketRejectedException("EXI: " + exi);
-			}
+		if(incoming && processed){
 			
+		}
+		if(!incoming && !processed && exiProcessors.containsKey(packet.getTo())){
+			// codificar
+			String exi = null;
+			try {
+				exi = exiProcessors.get(packet.getTo()).encodeString(packet.toXML());
+			} catch (IOException | EXIException | SAXException | TransformerException e) {
+				e.printStackTrace();
+			} 
+			if(exi != null)
+				session.deliverRawText(exi);
+System.out.println("XML: " + packet.toXML());
+System.out.println("EXI: " + exi);
+			throw new PacketRejectedException("EXI: " + exi);
 		}
 	}
 	
+	public void addEXIProcessor(JID jid, EXIProcessor processor){
+		this.exiProcessors.put(jid, processor);
+	}
+	
+	public EXIProcessor removeEXIProcessor(JID jid){
+			return this.exiProcessors.remove(jid);
+	}
 	
 }

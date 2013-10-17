@@ -35,6 +35,7 @@ public class EXIDecoderFilter extends IoFilterAdapter {
 						xml = ((EXIProcessor) session.getAttribute(EXIFilter.EXI_PROCESSOR)).decode(exiBytes);
 			            System.out.println("EXIDECODED (" + session.hashCode() + "): " + xml);
 			            session.setAttribute("exiBytes", null);
+			            // TODO: reemplazar substring(38) de una forma bonita
 			            super.messageReceived(nextFilter, session, ByteBuffer.wrap(xml.substring(38).getBytes()));
 			            return;
 					}catch(Exception e){
