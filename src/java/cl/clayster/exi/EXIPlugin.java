@@ -25,9 +25,7 @@ public class EXIPlugin implements Plugin{
         	socketAcceptor.getFilterChain().addLast(EXIFilter.filterName, exiFilter);
         }
         InterceptorManager.getInstance().addInterceptor(exiEncoderInterceptor);
-        // TODO: agregar el EXIEncoderInterceptor asociado a la conexión, y removerla al cerrar la conexión!
-        
-        System.out.println("EXIPlugin Started!");
+        System.out.println("Starting EXI Plugin");
 	}
 
 	@Override
@@ -36,9 +34,6 @@ public class EXIPlugin implements Plugin{
         if (connManager.getSocketAcceptor() != null && connManager.getSocketAcceptor().getFilterChain().contains("exiFilter")) {
         	connManager.getSocketAcceptor().getFilterChain().remove("exiFilter");
         }
-                
-        // TODO: ¿destruir los EXIEncoders y EXIDecoders?
-        
         exiFilter = null;
 	}
 

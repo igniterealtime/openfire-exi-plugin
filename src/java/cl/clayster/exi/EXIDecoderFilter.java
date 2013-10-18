@@ -3,9 +3,24 @@ package cl.clayster.exi;
 import org.apache.mina.common.ByteBuffer;
 import org.apache.mina.common.IoFilterAdapter;
 import org.apache.mina.common.IoSession;
+import org.xmpp.packet.JID;
 
+/**
+ *  Decodes EXI stanzas from a specific IoSession, it stores the JID address of the respective user, allowing to easily relate both sessions 
+ *  and remove the encoder when the session is closed.
+ * 
+ * @author Javier Placencio
+ *
+ */
 public class EXIDecoderFilter extends IoFilterAdapter {
+	
+	JID address;
+	
 		
+	public EXIDecoderFilter(JID address) {
+		this.address = address;
+	}
+	
 	public EXIDecoderFilter() {}
 
 	@Override
@@ -49,5 +64,10 @@ public class EXIDecoderFilter extends IoFilterAdapter {
         }
 	}
 	
+	@Override
+    public void sessionClosed(NextFilter nextFilter, IoSession session) throws Exception {
+    	EXIPlugin.exiEncoderInterceptor.removeEXIProcessor(address);
+    	super.sessionClosed(nextFilter, session);
+    }	
 
 }

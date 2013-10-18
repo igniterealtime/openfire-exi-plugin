@@ -17,7 +17,6 @@ import com.siemens.ct.exi.exceptions.EXIException;
 
 public class EXIEncoderInterceptor implements PacketInterceptor{
 	
-	//private HashMap<String, EXIProcessor> exiProcessors = new HashMap<String, EXIProcessor>();
 	private HashMap<JID, EXIProcessor> exiProcessors = new HashMap<JID, EXIProcessor>();	// each EXI-receiver has its own EXIProcessor
 	
 	public EXIEncoderInterceptor() {}
@@ -35,8 +34,7 @@ public class EXIEncoderInterceptor implements PacketInterceptor{
 			} catch (IOException | EXIException | SAXException | TransformerException e) {
 				e.printStackTrace();
 			} 
-			if(exi != null)
-				session.deliverRawText(exi);
+			if(exi != null)	session.deliverRawText(exi);
 System.out.println("XML: " + packet.toXML());
 System.out.println("EXI: " + exi);
 			throw new PacketRejectedException("EXI: " + exi);
