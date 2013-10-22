@@ -1,17 +1,16 @@
 package cl.clayster.exi;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.security.NoSuchAlgorithmException;
 import java.util.Iterator;
-import java.util.List;
 
 import org.apache.mina.common.ByteBuffer;
 import org.apache.mina.common.IoFilterAdapter;
 import org.apache.mina.common.IoSession;
-import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
@@ -27,12 +26,11 @@ import com.siemens.ct.exi.exceptions.EXIException;
  */
 public class EXIFilter extends IoFilterAdapter {
 	
-	private static final String setupLocation = "C:/Users/Javier/workspace/Personales/openfire/target/openfire/plugins/exi/res/schemas.xml";
 	public static final String EXI_PROCESSOR = EXIProcessor.class.getName();
 	public static final String filterName = "exiFilter";
 	private boolean enabled = true;
 
-    public EXIFilter(EXIEncoderInterceptor exiEncoderInterceptor) {
+    public EXIFilter() {
         enabled = JiveGlobals.getBooleanProperty("plugin.exi", true);
     }
 
@@ -73,7 +71,8 @@ public class EXIFilter extends IoFilterAdapter {
         	        addCodec(session);
         		}
         		else{
-        			System.err.println("An error occurred while processing the negotiation.");
+        			ByteBuffer bb = ByteBuffer.wrap("<failure xmlns=\'http://jabber.org/protocol/compress\'/><setup-failed/></failure>".getBytes());
+        	        session.write(bb);
         		}
     			throw new Exception("processed");
     		}
@@ -84,38 +83,64 @@ public class EXIFilter extends IoFilterAdapter {
     
     
     private String setupResponse(String message){
-    	List<Element> serverSchemas = new ArrayList<Element>();
-		BufferedReader br = null;
+    	File schemasFile = new File(EXIUtils.schemasFileLocation);
+    	if(!schemasFile.exists()){
+    		try {
+				EXIUtils.generateSchemasFile("C:/Users/Javier/workspace/Personales/openfire/target/openfire/plugins/exi/res");
+			} catch (NoSuchAlgorithmException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+    	}
+    	
 		String setupResponse = null;
 		try {
-			br = new BufferedReader(new FileReader(setupLocation));
-			Document document;
-			String line = br.readLine();
-			
-	        while (line != null && line.indexOf("<schema") > -1) {
-	        	line = line.substring(line.indexOf("<schema"));	// saltar todo (espacios, etc) hasta el siguiente elemento
-	        	document = DocumentHelper.parseText(line);
-	            serverSchemas.add(document.getRootElement());
+			// obtener el schemas File del servidor y transformarlo a un elemento XML
+			Element serverSchemas;
+	        BufferedReader br = new BufferedReader(new FileReader(EXIUtils.schemasFileLocation));
+	        StringBuilder sb = new StringBuilder();
+	        String line = br.readLine();
+
+	        while (line != null) {
+	            sb.append(line);
 	            line = br.readLine();
 	        }
 	        br.close();
+	        serverSchemas = DocumentHelper.parseText(sb.toString()).getRootElement();
 			
-	        document = DocumentHelper.parseText((String) message);
-	        Element setup = document.getRootElement();
-    		Element schema;
-    		boolean ok;
-	        for (@SuppressWarnings("unchecked") Iterator<Element> i = setup.elementIterator("schema"); i.hasNext(); ) {
-	        	schema = i.next();
+	        // transformar el <setup> recibido en un documento xml
+	        Element setup = DocumentHelper.parseText((String) message).getRootElement();
+    		boolean ok, ready = true;
+    		Element auxSchema1, auxSchema2;
+    		String ns, bytes, md5Hash;
+	        for (@SuppressWarnings("unchecked") Iterator<Element> i = setup.elementIterator("schema"); i.hasNext();) {
+	        	auxSchema1 = i.next();
 	        	ok = false;
-	        	for(Element e : serverSchemas){
-	        		if(e.attributeValue("ns").equals(schema.attributeValue("ns")) 
-		            		&& e.attributeValue("bytes").equals(schema.attributeValue("bytes"))
-		            		&& e.attributeValue("md5Hash").equals(schema.attributeValue("md5Hash"))){
+	        	ns = auxSchema1.attributeValue("ns");
+	        	bytes = auxSchema1.attributeValue("bytes");
+	        	md5Hash = auxSchema1.attributeValue("md5Hash");
+	        	for(@SuppressWarnings("unchecked") Iterator<Element> j = serverSchemas.elementIterator("schema"); j.hasNext();){
+	        		auxSchema2 = j.next();
+	        		if(auxSchema2.attributeValue("ns").equals(ns)
+	        				&& auxSchema2.attributeValue("bytes").equals(bytes)
+	        				&& auxSchema2.attributeValue("md5Hash").equals(md5Hash)){
 	        			ok = true;
 		            	break;
 		            }
 	        	}
-	        	if(!ok)	schema.setName("missingSchema");
+	        	if(!ok){
+	        		auxSchema1.setName("missingSchema");
+	        		ready = false;
+	        	}
+	        }
+	        // TODO: solucionar lo del orden de los import en el canonicalSchema (ns: http://www.w3.org/XML/1998/namespace no puede ir primero??!)
+	        if(ready){
+	        	try {
+					serverSchemas = EXIUtils.generateCanonicalSchema(serverSchemas);
+				} catch (NoSuchAlgorithmException e) {
+					e.printStackTrace();
+				}
 	        }
 	        setup.setName("setupResponse");
 	        setupResponse = setup.asXML();
@@ -137,11 +162,9 @@ System.out.println(setupResponse);
      * @return 
      */
     private boolean createExiProcessor(IoSession session){
-    	// TODO: crear el Canonical Schema
-        String newExiProcessorXsdLocation = "C:/Users/Javier/workspace/Personales/openfire/target/openfire/plugins/exi/res/canonicalSchema.xsd";
         EXIProcessor exiProcessor;
 		try {
-			exiProcessor = new EXIProcessor(newExiProcessorXsdLocation);
+			exiProcessor = new EXIProcessor(EXIUtils.newExiProcessorXsdLocation);
 		} catch (EXIException e) {
 			e.printStackTrace();
 			return false;
@@ -149,22 +172,7 @@ System.out.println(setupResponse);
 		session.setAttribute(EXI_PROCESSOR, exiProcessor);
 		return true;
     }
-		/*
-		// add EXIEncoder associating both sessions (IoSession and Jabber Session/JID)
-        XMPPServer server = XMPPServer.getInstance();
-        SessionManager sessionManager = server.getSessionManager();
-        NIOConnection conn = (NIOConnection) session.getAttribute("CONNECTION");
-        Collection<ClientSession> clientSessions = sessionManager.getSessions();
-        LocalClientSession lcl;
-        JID address = null;
-        for(ClientSession cl : clientSessions){
-        	lcl = (LocalClientSession) cl;
-        	if(lcl.getConnection().equals(conn)){
-        		address = lcl.getAddress();
-        		EXIPlugin.exiEncoderInterceptor.addEXIProcessor(address, exiProcessor);
-        	}
-        }
-        */
+    
     private void addCodec(IoSession session){
 		session.getFilterChain().addBefore(EXIFilter.filterName, "exiEncoder", new EXIEncoderFilter());
         // add EXIDecoder, which manages the EXISessions

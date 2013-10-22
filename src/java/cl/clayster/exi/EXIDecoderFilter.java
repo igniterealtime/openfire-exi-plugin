@@ -63,11 +63,5 @@ public class EXIDecoderFilter extends IoFilterAdapter {
 			super.messageReceived(nextFilter, session, message);
         }
 	}
-	
-	@Override
-    public void sessionClosed(NextFilter nextFilter, IoSession session) throws Exception {
-    	EXIPlugin.exiEncoderInterceptor.removeEXIProcessor(address);
-    	super.sessionClosed(nextFilter, session);
-    }	
 
 }
