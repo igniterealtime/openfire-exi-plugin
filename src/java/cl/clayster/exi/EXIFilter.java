@@ -1,16 +1,20 @@
 package cl.clayster.exi;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Calendar;
 import java.util.Iterator;
 
 import org.apache.mina.common.ByteBuffer;
 import org.apache.mina.common.IoFilterAdapter;
 import org.apache.mina.common.IoSession;
+import org.apache.xerces.impl.dv.util.Base64;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
@@ -54,7 +58,7 @@ public class EXIFilter extends IoFilterAdapter {
     	if(message instanceof String){
     		String msg = ((String) message);
     		if(msg.startsWith("<setup ")){
-    			String setupResponse = setupResponse((String) message);
+    			String setupResponse = setupResponse((String) message, session.hashCode());
         		if(setupResponse != null){
         			ByteBuffer bb = ByteBuffer.wrap(setupResponse.getBytes());
         	        session.write(bb);
@@ -76,23 +80,40 @@ public class EXIFilter extends IoFilterAdapter {
         		}
     			throw new Exception("processed");
     		}
+    		else if(msg.startsWith("<exi:streamStart ")){
+    			System.out.println("LISTO!");
+    			throw new Exception("processed");
+    		}
+    		else if(msg.startsWith("<uploadSchema ")){
+    			saveMissingSchema(msg, session.hashCode());
+    			throw new Exception("processed");
+    		}
     	}
     	super.messageReceived(nextFilter, session, message);
     	
     }
     
     
-    private String setupResponse(String message){
-    	File schemasFile = new File(EXIUtils.schemasFileLocation);
-    	if(!schemasFile.exists()){
-    		try {
-				EXIUtils.generateSchemasFile("C:/Users/Javier/workspace/Personales/openfire/target/openfire/plugins/exi/res");
-			} catch (NoSuchAlgorithmException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-    	}
+    
+    private void saveMissingSchema(String msg, int sessionHash) throws DocumentException, IOException, NoSuchAlgorithmException {
+    	msg = msg.substring(msg.indexOf('>') + 1, msg.indexOf("</uploadSchema>"));
+    	msg = new String(Base64.decode(msg), "UTF-8");
+    	File schemaFile = new File(EXIUtils.schemasFolder + '/' + Calendar.getInstance().getTimeInMillis() + ".xsd");
+		BufferedWriter schemaWriter = new BufferedWriter(new FileWriter(schemaFile));
+		schemaWriter.write(msg);
+		schemaWriter.close();
+		
+		EXIUtils.addNewSchemaToBothFiles(schemaFile.getAbsolutePath(), sessionHash);
+	}
+
+	private String setupResponse(String message, int sessionHash){
+		try {
+			EXIUtils.generateSchemasFile(EXIUtils.schemasFolder);
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
     	
 		String setupResponse = null;
 		try {
@@ -111,12 +132,12 @@ public class EXIFilter extends IoFilterAdapter {
 			
 	        // transformar el <setup> recibido en un documento xml
 	        Element setup = DocumentHelper.parseText((String) message).getRootElement();
-    		boolean ok, ready = true;
+    		boolean missingSchema;
     		Element auxSchema1, auxSchema2;
     		String ns, bytes, md5Hash;
 	        for (@SuppressWarnings("unchecked") Iterator<Element> i = setup.elementIterator("schema"); i.hasNext();) {
 	        	auxSchema1 = i.next();
-	        	ok = false;
+	        	missingSchema = true;
 	        	ns = auxSchema1.attributeValue("ns");
 	        	bytes = auxSchema1.attributeValue("bytes");
 	        	md5Hash = auxSchema1.attributeValue("md5Hash");
@@ -125,23 +146,21 @@ public class EXIFilter extends IoFilterAdapter {
 	        		if(auxSchema2.attributeValue("ns").equals(ns)
 	        				&& auxSchema2.attributeValue("bytes").equals(bytes)
 	        				&& auxSchema2.attributeValue("md5Hash").equals(md5Hash)){
-	        			ok = true;
+	        			missingSchema = false;
 		            	break;
 		            }
 	        	}
-	        	if(!ok){
+	        	if(missingSchema){
 	        		auxSchema1.setName("missingSchema");
-	        		ready = false;
 	        	}
 	        }
 	        // TODO: solucionar lo del orden de los import en el canonicalSchema (ns: http://www.w3.org/XML/1998/namespace no puede ir primero??!)
-	        if(ready){
-	        	try {
-					serverSchemas = EXIUtils.generateCanonicalSchema(serverSchemas);
-				} catch (NoSuchAlgorithmException e) {
-					e.printStackTrace();
-				}
-	        }
+	        
+        	try {
+				serverSchemas = EXIUtils.generateCanonicalSchema(serverSchemas, sessionHash);
+			} catch (NoSuchAlgorithmException e) {
+				e.printStackTrace();
+			}
 	        setup.setName("setupResponse");
 	        setupResponse = setup.asXML();
 System.out.println(setupResponse);
