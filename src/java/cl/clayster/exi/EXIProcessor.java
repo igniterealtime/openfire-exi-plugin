@@ -18,6 +18,7 @@ import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.XMLReaderFactory;
 
+import com.siemens.ct.exi.CodingMode;
 import com.siemens.ct.exi.EXIFactory;
 import com.siemens.ct.exi.FidelityOptions;
 import com.siemens.ct.exi.GrammarFactory;
@@ -36,46 +37,23 @@ public class EXIProcessor {
 	static SAXSource exiSource;
 	
 	public EXIProcessor(String xsdLocation) throws EXIException{
+		// TODO: eliminar la siguiente linea
+		xsdLocation = EXIUtils.exiSchemasFolder + "canonicalSchema.xsd";
+		
 		// create default factory and EXI grammar for schema
 		exiFactory = DefaultEXIFactory.newInstance();
 		exiFactory.setFidelityOptions(FidelityOptions.createAll());
+		exiFactory.setCodingMode(CodingMode.BIT_PACKED);
 		GrammarFactory grammarFactory = GrammarFactory.newInstance();
 		Grammars g = grammarFactory.createGrammars(xsdLocation);
 		exiFactory.setGrammars(g);
 	}
 	
-	public ByteBuffer encodeByteBuffer(String xml) throws IOException, EXIException, SAXException, TransformerException{
-		// encoding
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		EXIResult exiResult = new EXIResult(exiFactory);		
-		exiResult.setOutputStream(baos);
+	public static String decodeSchemaless(String exi) throws IOException, EXIException, SAXException, TransformerException{		
+		// create default factory and EXI grammar for schema
+		EXIFactory exiFactory = DefaultEXIFactory.newInstance();
+		exiFactory.setFidelityOptions(FidelityOptions.createAll());
 		
-		XMLReader xmlReader = XMLReaderFactory.createXMLReader();
-		xmlReader.setContentHandler(exiResult.getHandler());
-		xmlReader.parse(new InputSource(new StringReader(xml)));
-		return ByteBuffer.wrap(baos.toByteArray());
-	}
-	
-	public String encodeString(String xml) throws IOException, EXIException, SAXException, TransformerException{
-		// encoding
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		EXIResult exiResult = new EXIResult(exiFactory);		
-		exiResult.setOutputStream(baos);
-		
-		XMLReader xmlReader = XMLReaderFactory.createXMLReader();
-		xmlReader.setContentHandler(exiResult.getHandler());
-		xmlReader.parse(new InputSource(new StringReader(xml)));
-		return new String(baos.toByteArray(), EXIProcessor.CHARSET);
-	}
-	
-	/**
-     * <p>Decodes a String from EXI to XML</p>
-     *
-     * @param in <code>InputStream</code> to read from.
-     * @return a character array containing the XML characters
-     * @throws EXIException if it is a not well formed EXI document
-     */
-	public String decode(String exi) throws SAXException, TransformerException, EXIException, IOException{
 		// decoding		
 		SAXSource exiSource = new EXISource(exiFactory);
 		XMLReader exiReader = exiSource.getXMLReader();
@@ -93,6 +71,19 @@ public class EXIProcessor {
 		transformer.transform(exiSource, new StreamResult(baos));		
 		return baos.toString();
 	}
+	
+	public ByteBuffer encodeByteBuffer(String xml) throws IOException, EXIException, SAXException, TransformerException{
+		// encoding
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		EXIResult exiResult = new EXIResult(exiFactory);		
+		exiResult.setOutputStream(baos);
+		
+		XMLReader xmlReader = XMLReaderFactory.createXMLReader();
+		xmlReader.setContentHandler(exiResult.getHandler());
+		xmlReader.parse(new InputSource(new StringReader(xml)));
+		return ByteBuffer.wrap(baos.toByteArray());
+	}
+	
 	
 	/**
      * <p>Decodes a String from EXI to XML</p>
