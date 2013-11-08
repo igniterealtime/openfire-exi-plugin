@@ -98,16 +98,29 @@ public class EXIFilter extends IoFilterAdapter {
     			throw new Exception("processed");
     		}
     		else if(msg.startsWith("<downloadSchema ")){
-    			// TODO: hacer la descarga
     			String url = EXIUtils.getAttributeValue(msg, "url");
     			if(url != null){
-    				String resultado = EXIUtils.downloadTextFile(url);
-    				saveMissingSchema(resultado, session);
-    				session.write(ByteBuffer.wrap(("<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url + "' result='true'/>").getBytes()));
+    				String respuesta = "";
+    				try{
+	    				String descarga = EXIUtils.downloadTextFile(url);
+		    			if(descarga.contains("result='false'")){
+		    				respuesta = descarga;
+		    			}
+		    			else{
+		    				if(!saveDownloadedSchema(descarga, session)){
+		    					respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url
+		    							+ "' result='false'><invalidContentType contentTypeReturned='text/html'/></downloadSchemaResponse>";
+		    				}
+		    				else{
+		    					respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url + "' result='true'/>";
+		    				}
+		    			}
+    				}catch (Exception e){
+        				respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url
+        						+ "' result='false'><error message='No free space left.'/></downloadSchemaResponse>";
+        			}
+	    			session.write(ByteBuffer.wrap((respuesta).getBytes()));
     				throw new Exception("processed");
-    			}
-    			else{
-System.err.print("No URL sent.");
     			}
     		}
     	}
@@ -331,30 +344,28 @@ System.err.print("No URL sent.");
     	String md5Hash = null;
 		String bytes = null;
     	
-    	if(content.startsWith("<uploadSchema")){
-	    	String attributes = content.substring(0, content.indexOf('>') + 1);
-	    	content = content.substring(content.indexOf('>') + 1, content.indexOf("</"));
-	    	String contentType = EXIUtils.getAttributeValue(attributes, "contentType");
-	    	md5Hash = EXIUtils.getAttributeValue(attributes, "md5Hash");
-			bytes = EXIUtils.getAttributeValue(attributes, "bytes");
-	    	if((contentType != null && !contentType.equals("text")) && md5Hash != null && bytes != null){
-				if(contentType.equals("ExiBody")){
-	    			content = EXIProcessor.decodeSchemaless(content);
-	    			out.write(content.getBytes());
-	    		}
-	    		else if(contentType.equals("ExiDocument")){
-	    			// TODO
-	    		}
-	    		
-	    	}
-	    	else {
-		    	byte[] decodedBytes = Base64.decode(content);
-				out.write(decodedBytes);
-	    	}
+    	String attributes = content.substring(0, content.indexOf('>') + 1);
+    	content = content.substring(content.indexOf('>') + 1, content.indexOf("</"));
+    	String contentType = EXIUtils.getAttributeValue(attributes, "contentType");
+    	md5Hash = EXIUtils.getAttributeValue(attributes, "md5Hash");
+		bytes = EXIUtils.getAttributeValue(attributes, "bytes");
+		
+		byte[] outputBytes = content.getBytes();
+		
+    	if((contentType != null && !contentType.equals("text")) && md5Hash != null && bytes != null){
+			if(contentType.equals("ExiBody")){
+    			content = EXIProcessor.decodeSchemaless(content);
+    			outputBytes = content.getBytes();
+    		}
+    		else if(contentType.equals("ExiDocument")){
+    			// TODO
+    		}
+    		
     	}
-    	else{
-    		out.write(content.getBytes());
+    	else {
+	    	outputBytes = Base64.decode(content);
     	}
+    	out.write(outputBytes);
     	out.close();
     	
 		String ns = addNewSchemaToSchemasFile(filePath, md5Hash, bytes);
@@ -454,4 +465,23 @@ System.err.print("No URL sent.");
 	}
     
 /** downloadSchema **/
+    
+    /*
+     * 
+     */
+    private boolean saveDownloadedSchema(String content, IoSession session) throws NoSuchAlgorithmException, IOException, DocumentException{
+    	String filePath = EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
+    	try{
+    		DocumentHelper.parseText(content).getRootElement();
+    	}catch(DocumentException e){
+    		return false;
+    	}
+    	OutputStream out = new FileOutputStream(filePath);
+    	out.write(content.getBytes());
+    	out.close();
+    	
+		String ns = addNewSchemaToSchemasFile(filePath, null, null);
+		addNewSchemaToCanonicalSchema(filePath, ns, session);
+		return true;
+	}
 }
