@@ -38,7 +38,7 @@ public class EXIProcessor {
 	
 	public EXIProcessor(String xsdLocation) throws EXIException{
 		// TODO: eliminar la siguiente linea
-		xsdLocation = EXIUtils.exiSchemasFolder + "canonicalSchema.xsd";
+		xsdLocation = EXIUtils.schemasFolder + "canonicalSchema.xsd";
 		
 		// create default factory and EXI grammar for schema
 		exiFactory = DefaultEXIFactory.newInstance();
@@ -92,7 +92,7 @@ public class EXIProcessor {
      * @return a character array containing the XML characters
      * @throws EXIException if it is a not well formed EXI document
      */
-	public String decode(byte[] exiBytes) throws SAXException, TransformerException, EXIException, IOException{
+	public String decodeBytes(byte[] exiBytes) throws SAXException, TransformerException, EXIException, IOException{
 		// decoding		
 		SAXSource exiSource = new EXISource(exiFactory);
 		XMLReader exiReader = exiSource.getXMLReader();
@@ -106,6 +106,7 @@ public class EXIProcessor {
 	
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		transformer.transform(exiSource, new StreamResult(baos));		
+		
 		return baos.toString();
 	}
 

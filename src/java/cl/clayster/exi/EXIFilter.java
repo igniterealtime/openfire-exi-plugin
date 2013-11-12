@@ -83,7 +83,8 @@ public class EXIFilter extends IoFilterAdapter {
     		}
     		else if(msg.startsWith("<compress ")){
     			if(createExiProcessor(session)){
-        			ByteBuffer bb = ByteBuffer.wrap("<compressed xmlns=\'http://jabber.org/protocol/compress\'/>".getBytes());
+    				String respuesta = "<compressed xmlns='http://jabber.org/protocol/compress' configurationId='" + session.hashCode() + "'/>";
+        			ByteBuffer bb = ByteBuffer.wrap(respuesta.getBytes());
         	        session.write(bb);
         	        addCodec(session);
         		}
@@ -131,6 +132,17 @@ public class EXIFilter extends IoFilterAdapter {
 /** Setup **/
 
 	private String setupResponse(String message, IoSession session){
+		String setupResponse = null;
+		try{
+			Element setup = DocumentHelper.parseText((String) message).getRootElement();
+			String configId = setup.attributeValue("configurationId"); 
+			if(configId != null && new File(EXIUtils.exiSchemasFolder + "canonicalSchema_" + configId + ".xsd").exists()){
+				return "<setupResponse xmlns='http://jabber.org/protocol/compress/exi' agreement='true' configurationId='" + configId + "'/>";
+			}
+		} catch (DocumentException e){
+			e.printStackTrace();
+		}
+		
 		try {
 			generateSchemasFile(EXIUtils.schemasFolder);
 		} catch (NoSuchAlgorithmException e) {
@@ -138,8 +150,7 @@ public class EXIFilter extends IoFilterAdapter {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-    	
-		String setupResponse = null;
+		
 		try {
 			// obtener el schemas File del servidor y transformarlo a un elemento XML
 			Element serverSchemas;
