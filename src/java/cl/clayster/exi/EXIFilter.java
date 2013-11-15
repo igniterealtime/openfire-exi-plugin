@@ -10,7 +10,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.DigestInputStream;
@@ -32,6 +31,7 @@ import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
+import org.dom4j.io.XMLWriter;
 import org.jivesoftware.util.JiveGlobals;
 import org.xml.sax.SAXException;
 
@@ -65,14 +65,15 @@ public class EXIFilter extends IoFilterAdapter {
     @Override
     public void messageSent(NextFilter nextFilter, IoSession session, Object message) throws Exception {
     	
-		if (message instanceof ByteBuffer) {
+		if (message instanceof ByteBuffer && false) {
 			ByteBuffer byteBuffer = (ByteBuffer) message;
 			String msg = new String(byteBuffer.array());
-			
-			Document d = DocumentHelper.parseText(msg);
-			d.addElement("method").addText("exi");
-			message = ByteBuffer.allocate(d.asXML().length());
-			message = d.asXML().getBytes();
+			if(msg.startsWith("stream:features ")){
+				Document d = DocumentHelper.parseText(msg);
+				d.getRootElement().addElement("method").addText("exi");
+				message = ByteBuffer.allocate(d.asXML().length());
+				message = d.asXML().getBytes();
+			}
     	}
     	super.messageSent(nextFilter, session, message);
     }
@@ -111,7 +112,7 @@ public class EXIFilter extends IoFilterAdapter {
     			throw new Exception("processed");
     		}
     		else if(msg.startsWith("<uploadSchema ")){
-    			saveMissingSchema(msg, session);
+    			uploadMissingSchema(msg, session);
     			throw new Exception("processed");
     		}
     		else if(msg.startsWith("<downloadSchema ")){
@@ -119,23 +120,16 @@ public class EXIFilter extends IoFilterAdapter {
     			if(url != null){
     				String respuesta = "";
     				try{
-	    				//String descarga = EXIUtils.downloadTextFile(url);
-    					String descarga = EXIUtils.downloadXml(new URL(url)).asXML();
-System.err.println("descarga: " + descarga);
-		    			if(descarga.contains("result='false'")){
+    					String descarga = EXIUtils.downloadXml(url);
+		    			if(descarga.startsWith("<downloadSchemaResponse ")){
+		    				// error already found during download process
 		    				respuesta = descarga;
 		    			}
-		    			else{
-		    				if(!saveDownloadedSchema(descarga, session)){
-		    					respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url
-		    							+ "' result='false'><invalidContentType contentTypeReturned='text/html'/></downloadSchemaResponse>";
-		    				}
-		    				else{
-		    					respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url + "' result='true'/>";
-		    				}
+		    			else{	// SUCCESS!
+		    				saveDownloadedSchema(descarga, session);
+		    				respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url + "' result='true'/>";
 		    			}
-    				}catch (DocumentException e){
-System.err.println("DocumentException: " + e.getMessage());
+    				}catch (DocumentException e){	// error while parsing the just saved file, not probable (error makes sense while uploading)
     					respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url
     							+ "' result='false'><invalidContentType contentTypeReturned='text/html'/></downloadSchemaResponse>";
     				}catch (Exception e){
@@ -376,7 +370,7 @@ System.err.println("DocumentException: " + e.getMessage());
      * @throws SAXException 
      * @throws EXIException 
      */
-    private void saveMissingSchema(String content, IoSession session) 
+    private void uploadMissingSchema(String content, IoSession session) 
     		throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException{
     	String filePath = EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
     	OutputStream out = new FileOutputStream(filePath);
@@ -503,24 +497,25 @@ System.err.println("DocumentException: " + e.getMessage());
         session.setAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION, canonicalSchema.getAbsolutePath());
 	}
     
-/** downloadSchema **/
+/* downloadSchema */ 
+ 
     
-    /*
+    /**
      * 
-     */
-    private boolean saveDownloadedSchema(String content, IoSession session) throws NoSuchAlgorithmException, IOException, DocumentException{
+     * @param schema
+     * @param session
+     * @throws NoSuchAlgorithmException
+     * @throws IOException
+     * @throws DocumentException 
+     **/
+    private void saveDownloadedSchema(String content, IoSession session) throws NoSuchAlgorithmException, IOException, DocumentException {
     	String filePath = EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
-    	try{
-    		DocumentHelper.parseText(content).getRootElement();
-    	}catch(DocumentException e){
-    		return false;
-    	}
+    	
     	OutputStream out = new FileOutputStream(filePath);
     	out.write(content.getBytes());
     	out.close();
     	
-		String ns = addNewSchemaToSchemasFile(filePath, null, null);
+        String ns = addNewSchemaToSchemasFile(filePath, null, null);
 		addNewSchemaToCanonicalSchema(filePath, ns, session);
-		return true;
 	}
 }

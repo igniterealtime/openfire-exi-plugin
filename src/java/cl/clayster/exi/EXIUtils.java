@@ -5,14 +5,14 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Files;
 
-import org.dom4j.Document;
 import org.dom4j.DocumentException;
-import org.dom4j.io.SAXReader;
+import org.dom4j.DocumentHelper;
 
 /**
  * Contains useful methods to execute EXI functions needed by {@link EXIFilter} such as reading a file, getting an attribute from an XML document, among others.
@@ -69,43 +69,49 @@ public class EXIUtils {
 		return text;
 	}
 	
-	public static String downloadTextFile(String url){
-		StringBuilder sb = new StringBuilder();
-        String inputLine;
-        
+	public static String downloadXml(String url){
+		String responseContent = "<error message='AHNOSEYO.'/>";
 		try{
 			URLConnection uConn = new URL(url).openConnection();
 			// look for errors
 			switch(((HttpURLConnection) uConn).getResponseCode()){
-				case -1:	// invalid URL
-					return "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url + "' result='false'>"
-							+ "<invalidUrl message='Unrecognized schema.'/></downloadSchemaResponse>";
-				case 404:	// HTTP error
-					return "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url + "' result='false'>"
-							+ "<httpError code='404' message='NotFound'/>"
-							+ "</downloadSchemaResponse>";
-				case 200:	// success, continue
+				case -1:
+					responseContent = "<unknownError/>";
 					break;
+				case 404:	// HTTP error
+					responseContent = "<httpError code='404' message='Not Found'/>";
+					break;
+				case 400:case 401:case 402:case 403: case 405:case 406:case 407:case 408:case 409:case 410:case 411:case 412:case 413:case 414:case 415:
+				case 416:case 417:case 418:case 419:case 420:case 421:case 422:case 423:case 424:case 425:case 426:case 427:case 428:case 429:case 430:
+				case 431:case 440:case 444:case 449:case 450:case 451:case 495:case 496:case 497:case 499:  
+					responseContent = "<httpError code='" + ((HttpURLConnection) uConn).getResponseCode() + "' message='Client Error'/>";
+					break;
+				case 500:case 501:case 502:case 503:case 504:case 505:case 506:case 507:case 508:case 509:case 510:
+				case 511:case 522:case 523:case 524:case 598:case 599:
+					responseContent = "<httpError code='" + ((HttpURLConnection) uConn).getResponseCode() + "' message='Server Error'/>";
+					break;
+				default :	// SUCCESS!
+					String inputLine;
+					StringBuilder sb = new StringBuilder();
+					BufferedReader in = new BufferedReader(new InputStreamReader(uConn.getInputStream()));
+			        while ((inputLine = in.readLine()) != null){
+			        	sb.append(inputLine + '\n');
+			        }
+			        in.close();
+			        DocumentHelper.parseText(sb.toString());
+			        return sb.substring(0, sb.length());
 			}
-			BufferedReader in = new BufferedReader(new InputStreamReader(uConn.getInputStream()));
-	        while ((inputLine = in.readLine()) != null){
-	        	sb.append(inputLine + '\n');
-	        }
-	        in.close();
-System.out.println(sb.toString());
+		} catch(MalformedURLException e){
+			responseContent = "<invalidUrl message='Unrecognized schema.'/>";
 		} catch (SocketTimeoutException e) {
-			return "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url
-					+ "' result='false'><timeout message='No response returned.'/></downloadSchemaResponse>";
-	    } catch (Exception e){
-	    	return "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url
-					+ "' result='false'><error message='No free space left.'/></downloadSchemaResponse>";
+			responseContent = "<timeout message='No response returned.'/>";
+	    } catch (DocumentException e){
+	    	responseContent = "<invalidContentType contentTypeReturned='text/html'/>";
+	    } catch (Exception e){	    	
+	    	responseContent = "<error message='No free space left.'/>";
 	    }
-			return sb.substring(0, sb.length());
-	}
-	
-	public static Document downloadXml(URL url) throws DocumentException{
-		SAXReader reader = new SAXReader();
-        Document document = reader.read(url);
-        return document;
+		
+		return ("<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url
+					+ "' result='false'>" + responseContent + "</downloadSchemaResponse>");
 	}
 }
