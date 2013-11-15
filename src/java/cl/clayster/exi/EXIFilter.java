@@ -27,11 +27,9 @@ import org.apache.mina.common.ByteBuffer;
 import org.apache.mina.common.IoFilterAdapter;
 import org.apache.mina.common.IoSession;
 import org.apache.xerces.impl.dv.util.Base64;
-import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
-import org.dom4j.io.XMLWriter;
 import org.jivesoftware.util.JiveGlobals;
 import org.xml.sax.SAXException;
 
@@ -65,14 +63,15 @@ public class EXIFilter extends IoFilterAdapter {
     @Override
     public void messageSent(NextFilter nextFilter, IoSession session, Object message) throws Exception {
     	
-		if (message instanceof ByteBuffer && false) {
+		if (message instanceof ByteBuffer) {
 			ByteBuffer byteBuffer = (ByteBuffer) message;
 			String msg = new String(byteBuffer.array());
-			if(msg.startsWith("stream:features ")){
-				Document d = DocumentHelper.parseText(msg);
-				d.getRootElement().addElement("method").addText("exi");
-				message = ByteBuffer.allocate(d.asXML().length());
-				message = d.asXML().getBytes();
+			if(msg.startsWith("<stream:features") && msg.contains("</compression>")){
+				int i = msg.indexOf("</compression>");
+				msg = msg.substring(0, i)
+						.concat("<method>exi</method>")
+						.concat(msg.substring(i, msg.length()));
+				message = msg.getBytes();
 			}
     	}
     	super.messageSent(nextFilter, session, message);
