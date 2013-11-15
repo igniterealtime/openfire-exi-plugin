@@ -38,7 +38,7 @@ public class EXIProcessor {
 	
 	public EXIProcessor(String xsdLocation) throws EXIException{
 		// TODO: eliminar la siguiente linea
-		xsdLocation = EXIUtils.schemasFolder + "canonicalSchema.xsd";
+		xsdLocation = EXIUtils.exiSchemasFolder + "canonicalSchema.xsd";
 		
 		// create default factory and EXI grammar for schema
 		exiFactory = DefaultEXIFactory.newInstance();

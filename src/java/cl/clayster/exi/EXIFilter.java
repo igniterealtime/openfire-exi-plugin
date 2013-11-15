@@ -10,6 +10,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.DigestInputStream;
@@ -27,6 +28,7 @@ import org.apache.mina.common.ByteBuffer;
 import org.apache.mina.common.IoFilterAdapter;
 import org.apache.mina.common.IoSession;
 import org.apache.xerces.impl.dv.util.Base64;
+import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
@@ -60,6 +62,20 @@ public class EXIFilter extends IoFilterAdapter {
         JiveGlobals.setProperty("plugin.xmldebugger.", Boolean.toString(enabled)); 
     }
     
+    @Override
+    public void messageSent(NextFilter nextFilter, IoSession session, Object message) throws Exception {
+    	
+		if (message instanceof ByteBuffer) {
+			ByteBuffer byteBuffer = (ByteBuffer) message;
+			String msg = new String(byteBuffer.array());
+			
+			Document d = DocumentHelper.parseText(msg);
+			d.addElement("method").addText("exi");
+			message = ByteBuffer.allocate(d.asXML().length());
+			message = d.asXML().getBytes();
+    	}
+    	super.messageSent(nextFilter, session, message);
+    }
     
     /**
      * <p>Identifies EXI sessions (based on distinguishing bits -> should be based on Negotiation) and adds an EXIEncoder and EXIDecoder to that session</p>
@@ -103,7 +119,9 @@ public class EXIFilter extends IoFilterAdapter {
     			if(url != null){
     				String respuesta = "";
     				try{
-	    				String descarga = EXIUtils.downloadTextFile(url);
+	    				//String descarga = EXIUtils.downloadTextFile(url);
+    					String descarga = EXIUtils.downloadXml(new URL(url)).asXML();
+System.err.println("descarga: " + descarga);
 		    			if(descarga.contains("result='false'")){
 		    				respuesta = descarga;
 		    			}
@@ -116,6 +134,10 @@ public class EXIFilter extends IoFilterAdapter {
 		    					respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url + "' result='true'/>";
 		    				}
 		    			}
+    				}catch (DocumentException e){
+System.err.println("DocumentException: " + e.getMessage());
+    					respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url
+    							+ "' result='false'><invalidContentType contentTypeReturned='text/html'/></downloadSchemaResponse>";
     				}catch (Exception e){
         				respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url
         						+ "' result='false'><error message='No free space left.'/></downloadSchemaResponse>";
@@ -136,8 +158,14 @@ public class EXIFilter extends IoFilterAdapter {
 		try{
 			Element setup = DocumentHelper.parseText((String) message).getRootElement();
 			String configId = setup.attributeValue("configurationId"); 
-			if(configId != null && new File(EXIUtils.exiSchemasFolder + "canonicalSchema_" + configId + ".xsd").exists()){
-				return "<setupResponse xmlns='http://jabber.org/protocol/compress/exi' agreement='true' configurationId='" + configId + "'/>";
+			if(configId != null){
+				String agreement;
+				if(new File(EXIUtils.exiSchemasFolder + "canonicalSchema_" + configId + ".xsd").exists())
+					agreement = "true";
+				else{
+					agreement = "false";
+				}
+				return "<setupResponse xmlns='http://jabber.org/protocol/compress/exi' agreement='" + agreement + "' configurationId='" + configId + "'/>";
 			}
 		} catch (DocumentException e){
 			e.printStackTrace();
@@ -326,7 +354,7 @@ public class EXIFilter extends IoFilterAdapter {
      * @param session the IoSession where the EXI encoder and decoder will be added to.
      */
     private void addCodec(IoSession session){
-		session.getFilterChain().addBefore(EXIFilter.filterName, "exiEncoder", new EXIEncoderFilter());
+		session.getFilterChain().addAfter("tls", "exiEncoder", new EXIEncoderFilter());
 		session.getFilterChain().addBefore("xmpp", "exiDecoder", new EXIDecoderFilter());
     	session.getFilterChain().remove(EXIFilter.filterName);
         return;
