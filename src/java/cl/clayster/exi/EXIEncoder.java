@@ -5,19 +5,20 @@ import java.io.IOException;
 import javax.xml.transform.TransformerException;
 
 import org.apache.mina.common.ByteBuffer;
-import org.apache.mina.common.IoFilterAdapter;
 import org.apache.mina.common.IoSession;
+import org.apache.mina.filter.codec.ProtocolEncoderOutput;
+import org.jivesoftware.openfire.nio.XMPPEncoder;
 import org.xml.sax.SAXException;
 
 import com.siemens.ct.exi.exceptions.EXIException;
 
 
-public class EXIEncoderFilter extends IoFilterAdapter {
+public class EXIEncoder extends XMPPEncoder {
 	
-	public EXIEncoderFilter() {}
+	public EXIEncoder() {}
 
 	@Override
-	public void messageSent(NextFilter nextFilter, IoSession session, Object message) throws Exception {
+	public void encode(IoSession session, Object message, ProtocolEncoderOutput out) throws Exception {
 		String msg = null;
 		if (message instanceof ByteBuffer) {
 			ByteBuffer byteBuffer = (ByteBuffer) message;
@@ -26,7 +27,8 @@ System.out.println("XML: " + msg);
 			if(!msg.startsWith("<compressed ")){
 				try {
 					ByteBuffer bb = ((EXIProcessor) session.getAttribute(EXIFilter.EXI_PROCESSOR)).encodeByteBuffer(msg.substring(0, msg.lastIndexOf('>') + 1));
-					super.messageSent(nextFilter, session, bb);
+					out.write(bb);
+					super.encode(session, bb, out);
 					return;
 				} catch (IOException | EXIException | SAXException | TransformerException e) {
 					e.printStackTrace();
@@ -34,7 +36,7 @@ System.out.println("XML: " + msg);
 System.out.println("EXI: " + new String(((ByteBuffer) message).array()));
 			}
 		}
-		super.messageSent(nextFilter, session, message);
+		super.encode(session, message, out);
 	}
 
 }

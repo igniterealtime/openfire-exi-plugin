@@ -30,8 +30,6 @@ import com.siemens.ct.exi.helpers.DefaultEXIFactory;
 
 public class EXIProcessor {
 	
-	public static final String CHARSET = "ISO-8859-1";
-	
 	static EXIFactory exiFactory;
 	static EXIResult exiResult;
 	static SAXSource exiSource;
@@ -49,7 +47,7 @@ public class EXIProcessor {
 		exiFactory.setGrammars(g);
 	}
 	
-	public static String decodeSchemaless(String exi) throws IOException, EXIException, SAXException, TransformerException{		
+	public static String decodeSchemaless(byte[] exiBytes) throws IOException, EXIException, SAXException, TransformerException{		
 		// create default factory and EXI grammar for schema
 		EXIFactory exiFactory = DefaultEXIFactory.newInstance();
 		exiFactory.setFidelityOptions(FidelityOptions.createAll());
@@ -59,9 +57,7 @@ public class EXIProcessor {
 		XMLReader exiReader = exiSource.getXMLReader();
 	
 		TransformerFactory tf = TransformerFactory.newInstance();
-		Transformer transformer = tf.newTransformer();
-
-		byte[] exiBytes = exi.getBytes(EXIProcessor.CHARSET);		
+		Transformer transformer = tf.newTransformer();		
 		
 		InputStream exiIS = new ByteArrayInputStream(exiBytes);
 		exiSource = new SAXSource(new InputSource(exiIS));

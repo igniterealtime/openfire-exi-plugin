@@ -26,6 +26,7 @@ import javax.xml.transform.TransformerException;
 import org.apache.mina.common.ByteBuffer;
 import org.apache.mina.common.IoFilterAdapter;
 import org.apache.mina.common.IoSession;
+import org.apache.mina.filter.codec.ProtocolCodecFilter;
 import org.apache.xerces.impl.dv.util.Base64;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
@@ -95,7 +96,7 @@ public class EXIFilter extends IoFilterAdapter {
         		else{
         			System.err.println("An error occurred while processing the negotiation.");
         		}
-        		throw new Exception("processed");
+        		throw new Exception("<setup> PROCESSED!!!!!");
     		}
     		else if(msg.startsWith("<compress ")){
     			if(createExiProcessor(session)){
@@ -108,11 +109,11 @@ public class EXIFilter extends IoFilterAdapter {
         			ByteBuffer bb = ByteBuffer.wrap("<failure xmlns=\'http://jabber.org/protocol/compress\'><setup-failed/></failure>".getBytes());
         	        session.write(bb);
         		}
-    			throw new Exception("processed");
+    			throw new Exception("<compress> PROCESSED!!!!!");
     		}
     		else if(msg.startsWith("<uploadSchema ")){
     			uploadMissingSchema(msg, session);
-    			throw new Exception("processed");
+    			throw new Exception("<uploadSchema> processed");
     		}
     		else if(msg.startsWith("<downloadSchema ")){
     			String url = EXIUtils.getAttributeValue(msg, "url");
@@ -136,7 +137,7 @@ public class EXIFilter extends IoFilterAdapter {
         						+ "' result='false'><error message='No free space left.'/></downloadSchemaResponse>";
         			}
 	    			session.write(ByteBuffer.wrap((respuesta).getBytes()));
-    				throw new Exception("processed");
+	    			throw new Exception("<downloadSchemaResponse> PROCESSED!!!!!");
     			}
     		}
     	}
@@ -347,8 +348,13 @@ public class EXIFilter extends IoFilterAdapter {
      * @param session the IoSession where the EXI encoder and decoder will be added to.
      */
     private void addCodec(IoSession session){
+		/*
 		session.getFilterChain().addAfter("tls", "exiEncoder", new EXIEncoderFilter());
 		session.getFilterChain().addBefore("xmpp", "exiDecoder", new EXIDecoderFilter());
+    	*/
+    	session.getFilterChain().remove("xmpp");
+    	session.getFilterChain().addAfter(EXIFilter.filterName, "exiCodec", new ProtocolCodecFilter(new EXICodecFactory()));
+    	
     	session.getFilterChain().remove(EXIFilter.filterName);
         return;
     }
@@ -386,7 +392,7 @@ public class EXIFilter extends IoFilterAdapter {
 		
     	if((contentType != null && !contentType.equals("text")) && md5Hash != null && bytes != null){
 			if(contentType.equals("ExiBody")){
-    			content = EXIProcessor.decodeSchemaless(content);
+    			content = EXIProcessor.decodeSchemaless(content.getBytes());
     			outputBytes = content.getBytes();
     		}
     		else if(contentType.equals("ExiDocument")){
