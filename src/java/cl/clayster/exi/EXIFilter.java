@@ -31,8 +31,11 @@ import org.apache.xerces.impl.dv.util.Base64;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
+import org.jivesoftware.openfire.SessionManager;
+import org.jivesoftware.openfire.net.ClientStanzaHandler;
 import org.jivesoftware.util.JiveGlobals;
 import org.xml.sax.SAXException;
+import org.xmpp.packet.JID;
 
 import com.siemens.ct.exi.exceptions.EXIException;
 
@@ -47,6 +50,8 @@ public class EXIFilter extends IoFilterAdapter {
 	public static final String EXI_PROCESSOR = EXIProcessor.class.getName();
 	public static final String filterName = "exiFilter";
 	private boolean enabled = true;
+	
+	public static HashMap<JID, IoSession> sessions = new HashMap<JID, IoSession>();
 
     public EXIFilter() {
         enabled = JiveGlobals.getBooleanProperty("plugin.exi", true);
@@ -348,14 +353,9 @@ public class EXIFilter extends IoFilterAdapter {
      * @param session the IoSession where the EXI encoder and decoder will be added to.
      */
     private void addCodec(IoSession session){
-		/*
-		session.getFilterChain().addAfter("tls", "exiEncoder", new EXIEncoderFilter());
 		session.getFilterChain().addBefore("xmpp", "exiDecoder", new EXIDecoderFilter());
-    	*/
-    	session.getFilterChain().remove("xmpp");
-    	session.getFilterChain().addAfter(EXIFilter.filterName, "exiCodec", new ProtocolCodecFilter(new EXICodecFactory()));
-    	
-    	session.getFilterChain().remove(EXIFilter.filterName);
+    	session.getFilterChain().remove(EXIFilter.filterName);	
+    	sessions.put(((ClientStanzaHandler) session.getAttribute("HANDLER")).getAddress(), session);
         return;
     }
     

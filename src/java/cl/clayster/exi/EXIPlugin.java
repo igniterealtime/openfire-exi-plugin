@@ -6,6 +6,7 @@ import org.apache.mina.transport.socket.nio.SocketAcceptor;
 import org.jivesoftware.openfire.XMPPServer;
 import org.jivesoftware.openfire.container.Plugin;
 import org.jivesoftware.openfire.container.PluginManager;
+import org.jivesoftware.openfire.interceptor.InterceptorManager;
 import org.jivesoftware.openfire.spi.ConnectionManagerImpl;
 
 public class EXIPlugin implements Plugin{
@@ -21,6 +22,7 @@ public class EXIPlugin implements Plugin{
         if (socketAcceptor != null) {
         	socketAcceptor.getFilterChain().addLast(EXIFilter.filterName, exiFilter);
         }
+        InterceptorManager.getInstance().addInterceptor(new EXIEncoderInterceptor(exiFilter));
         System.out.println("Starting EXI Plugin");
 	}
 

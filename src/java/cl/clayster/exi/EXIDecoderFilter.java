@@ -3,6 +3,7 @@ package cl.clayster.exi;
 import org.apache.mina.common.ByteBuffer;
 import org.apache.mina.common.IoFilterAdapter;
 import org.apache.mina.common.IoSession;
+import org.jivesoftware.openfire.net.ClientStanzaHandler;
 import org.xmpp.packet.JID;
 
 /**
@@ -63,5 +64,11 @@ System.out.println("EXIDECODED (" + session.hashCode() + "): " + xml);
 			super.messageReceived(nextFilter, session, message);
         }
 	}
+	
+	@Override
+    public void sessionClosed(NextFilter nextFilter, IoSession session) throws Exception {
+    	EXIFilter.sessions.remove(((ClientStanzaHandler) session.getAttribute("HANDLER")).getAddress());
+    	super.sessionClosed(nextFilter, session);
+    }
 
 }
