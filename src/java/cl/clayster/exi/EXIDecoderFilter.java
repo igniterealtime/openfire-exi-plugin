@@ -27,10 +27,6 @@ public class EXIDecoderFilter extends IoFilterAdapter {
 	@Override
 	public void messageReceived(NextFilter nextFilter, IoSession session, Object message) throws Exception{
 		
-		//TODO: al implementar la negociación (6)
-		// revisar el success de EXI y cuando se tenga, agregar la sesion a sessions. 
-		// entonces revisar si sessions.contains(session) para ver si decodificar o no el msj.
-		
 		String xml = null;
 		if (message instanceof ByteBuffer) {
 			ByteBuffer byteBuffer = (ByteBuffer) message;
@@ -46,18 +42,22 @@ public class EXIDecoderFilter extends IoFilterAdapter {
 			}
 			if(EXIProcessor.isEXI(exiBytes[0])){
 				if(exiBytes.length > 1){
+					// Decode EXI bytes
+System.out.println("Decoding EXI message...");
+//TODO: reemplazar substring(38) de una forma bonita
 					try{
-						// Decode EXI bytes
-						xml = ((EXIProcessor) session.getAttribute(EXIFilter.EXI_PROCESSOR)).decodeBytes(exiBytes);
-System.out.println("EXIDECODED (" + session.hashCode() + "): " + xml);
-			            session.setAttribute("exiBytes", null);
-			            // TODO: reemplazar substring(38) de una forma bonita
-			            super.messageReceived(nextFilter, session, ByteBuffer.wrap(xml.substring(38).getBytes()));
-			            return;
-					}catch(Exception e){
+						xml = ((EXIProcessor) session.getAttribute(EXIFilter.EXI_PROCESSOR)).decodeBytes(exiBytes).substring(38);
+					} catch (Exception e){
 						e.printStackTrace();
-						//System.err.println("hay q guardar bytes:" + new String(exiBytes, EXIProcessor.CHARSET));
 					}
+System.out.println("EXIDECODED (" + session.hashCode() + "): " + xml);
+					if(xml.startsWith("<exi:streamStart ")){
+						throw new Exception("<exi:streamStart> PROCESSED!!!!!");
+					}
+	
+		            session.setAttribute("exiBytes", null);
+		            super.messageReceived(nextFilter, session, ByteBuffer.wrap(xml.getBytes()));
+		            return;
 				}
 				session.setAttribute("exiBytes", exiBytes);
             }

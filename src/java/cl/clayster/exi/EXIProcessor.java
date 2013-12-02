@@ -2,6 +2,7 @@ package cl.clayster.exi;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -34,6 +35,10 @@ public class EXIProcessor {
 	static EXIResult exiResult;
 	static SAXSource exiSource;
 	
+	private static final CodingMode schemalessCodingMode = CodingMode.COMPRESSION;
+	private static final FidelityOptions schemalessFidelityOptions = FidelityOptions.createAll();
+	private static final boolean schemalessIsFragmet = false;
+	
 	public EXIProcessor(String xsdLocation) throws EXIException{
 		// TODO: eliminar la siguiente linea
 		xsdLocation = EXIUtils.exiSchemasFolder + "canonicalSchema.xsd";
@@ -42,36 +47,90 @@ public class EXIProcessor {
 		exiFactory = DefaultEXIFactory.newInstance();
 		exiFactory.setFidelityOptions(FidelityOptions.createAll());
 		exiFactory.setCodingMode(CodingMode.BIT_PACKED);
-		GrammarFactory grammarFactory = GrammarFactory.newInstance();
-		Grammars g = grammarFactory.createGrammars(xsdLocation);
-		exiFactory.setGrammars(g);
+		
+		if(xsdLocation != null && new File(xsdLocation).isFile()){
+			GrammarFactory grammarFactory = GrammarFactory.newInstance();
+			Grammars g = grammarFactory.createGrammars(xsdLocation);
+			exiFactory.setGrammars(g);
+		}
+		else{
+			System.out.println("Invalid Schema file location. Encoding schema-less.");
+		}
 	}
 	
-	public static String decodeSchemaless(byte[] exiBytes) throws IOException, EXIException, SAXException, TransformerException{		
-		// create default factory and EXI grammar for schema
-		EXIFactory exiFactory = DefaultEXIFactory.newInstance();
-		exiFactory.setFidelityOptions(FidelityOptions.createAll());
+	/**
+	 * Encodes an XML String into an EXI byte array using no schema files.
+	 * 
+	 * @param xml the String to be encoded
+	 * @return a byte array containing the encoded bytes
+	 * @throws IOException
+	 * @throws EXIException
+	 * @throws SAXException
+	 */
+	public static byte[] encodeSchemaless(String xml) throws IOException, EXIException, SAXException{
+		ByteArrayOutputStream osEXI = new ByteArrayOutputStream();
+		// start encoding process
+		EXIFactory factory = DefaultEXIFactory.newInstance();
+		factory.setCodingMode(schemalessCodingMode);
+		factory.setFidelityOptions(schemalessFidelityOptions);
+		factory.setFragment(schemalessIsFragmet);
 		
-		// decoding		
-		SAXSource exiSource = new EXISource(exiFactory);
-		XMLReader exiReader = exiSource.getXMLReader();
+		XMLReader xmlReader = XMLReaderFactory.createXMLReader();
+		EXIResult exiResult = new EXIResult(factory);
+		
+		exiResult.setOutputStream(osEXI);
+		xmlReader.setContentHandler(exiResult.getHandler());
+		xmlReader.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", Boolean.FALSE);	// ignorar DTD externos
+		
+		xmlReader.parse(new InputSource(new StringReader(xml)));
+		
+System.out.println("(" + xml.length() + "->" + osEXI.toByteArray().length + ")");
+		return osEXI.toByteArray();
+	}
 	
+	/**
+	 * Decodes an EXI byte array using no schema files.
+	 * 
+	 * @param exi the EXI stanza to be decoded
+	 * @return a String containing the decoded XML
+	 * @throws IOException
+	 * @throws EXIException
+	 * @throws SAXException
+	 */
+	public static String decodeSchemaless(byte[] exi) throws TransformerException, EXIException{
 		TransformerFactory tf = TransformerFactory.newInstance();
-		Transformer transformer = tf.newTransformer();		
+		Transformer transformer = tf.newTransformer();
 		
-		InputStream exiIS = new ByteArrayInputStream(exiBytes);
-		exiSource = new SAXSource(new InputSource(exiIS));
-		exiSource.setXMLReader(exiReader);
+		EXIFactory factory = DefaultEXIFactory.newInstance();
+		factory.setCodingMode(schemalessCodingMode);
+		factory.setFidelityOptions(schemalessFidelityOptions);
+		factory.setFragment(schemalessIsFragmet);
+		
+		SAXSource exiSource = new SAXSource(new InputSource(new ByteArrayInputStream(exi)));
+		exiSource.setXMLReader(factory.createEXIReader());
+
+		ByteArrayOutputStream xmlDecoded = new ByteArrayOutputStream();
+		transformer.transform(exiSource, new StreamResult(xmlDecoded));
+
+		return xmlDecoded.toString();
+	}
 	
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		transformer.transform(exiSource, new StreamResult(baos));		
-		return baos.toString();
+	/**
+	 * Uses distinguishing bits (10) to recognize EXI stanzas.
+	 * 
+	 * @param b the first byte of the EXI stanza to be evaluated
+	 * @return <b>true</b> if the byte starts with distinguishing bits, <b>false</b> otherwise
+	 */
+	public static boolean isEXI(byte b){
+		byte distinguishingBits = -128;
+		byte aux = (byte) (b & distinguishingBits);
+		return aux == distinguishingBits;
 	}
 	
 	public ByteBuffer encodeByteBuffer(String xml) throws IOException, EXIException, SAXException, TransformerException{
 		// encoding
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		EXIResult exiResult = new EXIResult(exiFactory);		
+		exiResult = new EXIResult(exiFactory);		
 		exiResult.setOutputStream(baos);
 		
 		XMLReader xmlReader = XMLReaderFactory.createXMLReader();
@@ -90,7 +149,7 @@ public class EXIProcessor {
      */
 	public String decodeBytes(byte[] exiBytes) throws SAXException, TransformerException, EXIException, IOException{
 		// decoding		
-		SAXSource exiSource = new EXISource(exiFactory);
+		exiSource = new EXISource(exiFactory);
 		XMLReader exiReader = exiSource.getXMLReader();
 	
 		TransformerFactory tf = TransformerFactory.newInstance();
@@ -101,22 +160,8 @@ public class EXIProcessor {
 		exiSource.setXMLReader(exiReader);
 	
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		transformer.transform(exiSource, new StreamResult(baos));		
+		transformer.transform(exiSource, new StreamResult(baos));
 		
 		return baos.toString();
-	}
-
-	
-	/**
-     * <p>Uses Distinguishing bits to know if it is an EXI message or an XML message.</p>
-     *
-     * @param b first byte of the EXI Header containing the two first.
-     * @return <code>true</code> if the first two bits are 1 and 0, respectively. <code>false</code> otherwise. 
-     */
-	
-	public static boolean isEXI(byte b){
-		byte distinguishingBits = -128;
-		byte aux = (byte) (b & distinguishingBits);
-		return aux == distinguishingBits;
 	}
 }

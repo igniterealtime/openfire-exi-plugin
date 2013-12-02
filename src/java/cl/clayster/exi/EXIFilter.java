@@ -26,12 +26,10 @@ import javax.xml.transform.TransformerException;
 import org.apache.mina.common.ByteBuffer;
 import org.apache.mina.common.IoFilterAdapter;
 import org.apache.mina.common.IoSession;
-import org.apache.mina.filter.codec.ProtocolCodecFilter;
 import org.apache.xerces.impl.dv.util.Base64;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
-import org.jivesoftware.openfire.SessionManager;
 import org.jivesoftware.openfire.net.ClientStanzaHandler;
 import org.jivesoftware.util.JiveGlobals;
 import org.xml.sax.SAXException;
@@ -117,6 +115,7 @@ public class EXIFilter extends IoFilterAdapter {
     			throw new Exception("<compress> PROCESSED!!!!!");
     		}
     		else if(msg.startsWith("<uploadSchema ")){
+System.out.println("UPLOAD SCHEMA");
     			uploadMissingSchema(msg, session);
     			throw new Exception("<uploadSchema> processed");
     		}

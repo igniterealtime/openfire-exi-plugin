@@ -26,7 +26,8 @@ public class EXIEncoderInterceptor implements PacketInterceptor{
         @Override
         public void interceptPacket(Packet packet, Session session, boolean incoming, boolean processed) throws PacketRejectedException {
                 if(exiFilter != null){
-                        if(!incoming && !processed && EXIFilter.sessions.containsKey(session.getAddress())){
+                        if(!incoming){
+                        	if(!processed && EXIFilter.sessions.containsKey(session.getAddress())){
                                 // codificar
                                 IoSession ioSession = EXIFilter.sessions.get(session.getAddress());
                                 String msg = packet.toXML();
@@ -47,6 +48,7 @@ System.out.println("EXI(" + bb.limit() + "): " + EXIUtils.bytesToHex(bb.array())
 								} catch (TransformerException e) {
 									e.printStackTrace();
 								}
+                        	}
                         }
                         
                 }
