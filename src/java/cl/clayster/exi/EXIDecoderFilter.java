@@ -4,7 +4,7 @@ import org.apache.mina.common.ByteBuffer;
 import org.apache.mina.common.IoFilterAdapter;
 import org.apache.mina.common.IoSession;
 import org.jivesoftware.openfire.net.ClientStanzaHandler;
-import org.xmpp.packet.JID;
+import org.jivesoftware.util.JiveGlobals;
 
 /**
  *  Decodes EXI stanzas from a specific IoSession, it stores the JID address of the respective user, allowing to easily relate both sessions 
@@ -15,12 +15,7 @@ import org.xmpp.packet.JID;
  */
 public class EXIDecoderFilter extends IoFilterAdapter {
 	
-	JID address;
-	
-		
-	public EXIDecoderFilter(JID address) {
-		this.address = address;
-	}
+	boolean streamStartFlag = false;
 	
 	public EXIDecoderFilter() {}
 
@@ -41,21 +36,31 @@ public class EXIDecoderFilter extends IoFilterAdapter {
 				exiBytes = dest;
 			}
 			if(EXIProcessor.isEXI(exiBytes[0])){
-				if(exiBytes.length > 1){
+				if(exiBytes.length > 3){
 					// Decode EXI bytes
-System.out.println("Decoding EXI message...");
-//TODO: reemplazar substring(38) de una forma bonita
+//System.out.println("Decoding EXI message: " + EXIUtils.bytesToHex(exiBytes));
+//TODO: reemplazar substring(38) de una forma bonita (elimina <?xml version=1.0.......)
 					try{
 						xml = ((EXIProcessor) session.getAttribute(EXIFilter.EXI_PROCESSOR)).decodeBytes(exiBytes).substring(38);
+System.out.println("EXIDECODED (" + session.hashCode() + "): " + xml);
 					} catch (Exception e){
 						e.printStackTrace();
 					}
-System.out.println("EXIDECODED (" + session.hashCode() + "): " + xml);
+					session.setAttribute("exiBytes", null);	// los bytes antiguos ya fueron usados con el utlimo mensaje
+					
 					if(xml.startsWith("<exi:streamStart ")){
+						String streamStart = " <exi:streamStart from='"
+								+ JiveGlobals.getProperty("xmpp.domain", "127.0.0.1").toLowerCase()
+								+ "' version='1.0' xml:lang='en' xmlns:exi='http://jabber.org/protocol/compress/exi'>"
+								+ "<exi:xmlns prefix='' namespace='jabber:client'/><exi:xmlns prefix='streams' namespace='http://etherx.jabber.org/streams'/>"
+								+ "<exi:xmlns prefix='exi' namespace='http://jabber.org/protocol/compress/exi'/></exi:streamStart>";
+						session.write(((EXIProcessor) session.getAttribute(EXIFilter.EXI_PROCESSOR)).encodeByteBuffer(streamStart));
 						throw new Exception("<exi:streamStart> PROCESSED!!!!!");
 					}
-	
-		            session.setAttribute("exiBytes", null);
+					else if(xml.startsWith("<exi:streamEnd ")){
+						xml = "</stream:stream>";
+						session.write(exiBytes);
+					}
 		            super.messageReceived(nextFilter, session, ByteBuffer.wrap(xml.getBytes()));
 		            return;
 				}

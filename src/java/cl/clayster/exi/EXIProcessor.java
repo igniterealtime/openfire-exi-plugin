@@ -35,7 +35,7 @@ public class EXIProcessor {
 	static EXIResult exiResult;
 	static SAXSource exiSource;
 	
-	private static final CodingMode schemalessCodingMode = CodingMode.COMPRESSION;
+	private static final CodingMode schemalessCodingMode = CodingMode.BIT_PACKED;
 	private static final FidelityOptions schemalessFidelityOptions = FidelityOptions.createAll();
 	private static final boolean schemalessIsFragmet = false;
 	
@@ -84,7 +84,6 @@ public class EXIProcessor {
 		
 		xmlReader.parse(new InputSource(new StringReader(xml)));
 		
-System.out.println("(" + xml.length() + "->" + osEXI.toByteArray().length + ")");
 		return osEXI.toByteArray();
 	}
 	
