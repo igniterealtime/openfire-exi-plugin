@@ -2,6 +2,7 @@ package cl.clayster.exi;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -53,6 +54,13 @@ public class EXIUtils {
 		}
 	}
 	
+	public static void writeFile(String fileName, String content) throws IOException {
+		if(fileName != null && content != null){
+			FileOutputStream out = new FileOutputStream(fileName);
+			out.write(content.getBytes());
+			out.close();
+		}
+	}
 	
 	public static String getAttributeValue(String text, String attribute) {
 		if(text.indexOf(attribute) == -1){
@@ -70,9 +78,11 @@ public class EXIUtils {
 	}
 	
 	public static String downloadXml(String url){
-		String responseContent = "<error message='AHNOSEYO.'/>";
+		StringBuilder sb = new StringBuilder();
+		String responseContent = "<error message=''/>";
+		URLConnection uConn = null;
 		try{
-			URLConnection uConn = new URL(url).openConnection();
+			uConn = new URL(url).openConnection();
 			// look for errors
 			switch(((HttpURLConnection) uConn).getResponseCode()){
 				case -1:
@@ -92,7 +102,6 @@ public class EXIUtils {
 					break;
 				default :	// SUCCESS!
 					String inputLine;
-					StringBuilder sb = new StringBuilder();
 					BufferedReader in = new BufferedReader(new InputStreamReader(uConn.getInputStream()));
 			        while ((inputLine = in.readLine()) != null){
 			        	sb.append(inputLine + '\n');
@@ -106,7 +115,9 @@ public class EXIUtils {
 		} catch (SocketTimeoutException e) {
 			responseContent = "<timeout message='No response returned.'/>";
 	    } catch (DocumentException e){
-	    	responseContent = "<invalidContentType contentTypeReturned='text/html'/>";
+	    	int sc = uConn.getContentType().indexOf(';');
+	    	String contentType = sc != -1 ? uConn.getContentType().substring(0, sc) : uConn.getContentType();
+			responseContent = "<invalidContentType contentTypeReturned='" + contentType + "'/>";
 	    } catch (Exception e){	    	
 	    	responseContent = "<error message='No free space left.'/>";
 	    }
