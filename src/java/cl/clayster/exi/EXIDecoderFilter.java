@@ -38,7 +38,7 @@ public class EXIDecoderFilter extends IoFilterAdapter {
 			if(EXIProcessor.isEXI(exiBytes[0])){
 				if(exiBytes.length > 3){
 					// Decode EXI bytes
-//System.out.println("Decoding EXI message: " + EXIUtils.bytesToHex(exiBytes));
+System.out.println("Decoding EXI message: " + EXIUtils.bytesToHex(exiBytes));
 //TODO: reemplazar substring(38) de una forma bonita (elimina <?xml version=1.0.......)
 					try{
 						xml = ((EXIProcessor) session.getAttribute(EXIFilter.EXI_PROCESSOR)).decodeBytes(exiBytes).substring(38);

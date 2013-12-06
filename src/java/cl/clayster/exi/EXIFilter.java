@@ -20,6 +20,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 
 import javax.xml.transform.TransformerException;
 
@@ -103,7 +104,7 @@ public class EXIFilter extends IoFilterAdapter {
     		}
     		else if(msg.startsWith("<compress ")){
     			if(createExiProcessor(session)){
-    				String respuesta = "<compressed xmlns='http://jabber.org/protocol/compress' configurationId='" + session.hashCode() + "'/>";
+    				String respuesta = "<compressed xmlns='http://jabber.org/protocol/compress'/>";
         			ByteBuffer bb = ByteBuffer.wrap(respuesta.getBytes());
         	        session.write(bb);
         	        addCodec(session);
@@ -133,7 +134,7 @@ System.out.println("UPLOAD SCHEMA");
 		    				saveDownloadedSchema(descarga, session);
 		    				respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url + "' result='true'/>";
 		    			}
-    				}catch (DocumentException e){	// error while parsing the just saved file, not probable (error makes sense while uploading)
+    				}catch (DocumentException e){	// error while parsing the just saved file, not probable (exception makes sense while uploading)
     					respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url
     							+ "' result='false'><invalidContentType contentTypeReturned='text/html'/></downloadSchemaResponse>";
     				}catch (Exception e){
@@ -153,9 +154,10 @@ System.out.println("UPLOAD SCHEMA");
 
 	private String setupResponse(String message, IoSession session){
 		String setupResponse = null;
+		String configId = "";
 		try{
 			Element setup = DocumentHelper.parseText((String) message).getRootElement();
-			String configId = setup.attributeValue("configurationId"); 
+			configId = setup.attributeValue("configurationId"); 
 			if(configId != null){
 				String agreement;
 				if(new File(EXIUtils.exiSchemasFolder + "canonicalSchema_" + configId + ".xsd").exists())
@@ -208,13 +210,19 @@ System.out.println("UPLOAD SCHEMA");
 	        	}
 	        	if(missingSchema){
 	        		auxSchema1.setName("missingSchema");
+	        		if(setup.attributeValue("agreement") == null)	setup.addAttribute("agreement", "false");
 	        	}
 	        }
 	        // TODO: solucionar lo del orden de los import en el canonicalSchema (ns: http://www.w3.org/XML/1998/namespace no puede ir primero??!)
+	        configId = UUID.randomUUID().toString();
+	        session.setAttribute("configId", configId);
 	        
-        	serverSchemas = generateCanonicalSchema(serverSchemas, session);
+	        serverSchemas = generateCanonicalSchema(serverSchemas, session);
 	        setup.setName("setupResponse");
+	        setup.addAttribute("configurationId", configId);
 	        setupResponse = setup.asXML();
+	        
+	        
 		} catch (FileNotFoundException e1) {
 			return null;
 		} catch (IOException e) {
@@ -310,7 +318,7 @@ System.out.println("UPLOAD SCHEMA");
 	 * @throws IOException
 	 */
 	private Element generateCanonicalSchema(Element setup, IoSession session) throws IOException {
-		File newCanonicalSchema = new File(EXIUtils.exiSchemasFolder + "canonicalSchema_" + session.hashCode() + ".xsd");
+		File newCanonicalSchema = new File(EXIUtils.exiSchemasFolder + "canonicalSchema_" + session.getAttribute("configId") + ".xsd");
         BufferedWriter newCanonicalSchemaWriter = new BufferedWriter(new FileWriter(newCanonicalSchema));
         newCanonicalSchemaWriter.write("<?xml version='1.0' encoding='UTF-8'?> \n\n<xs:schema \n\txmlns:xs='http://www.w3.org/2001/XMLSchema' \n\ttargetNamespace='urn:xmpp:exi:cs' \n\txmlns='urn:xmpp:exi:cs' \n\telementFormDefault='qualified'>\n");
         
@@ -473,7 +481,7 @@ System.out.println("UPLOAD SCHEMA");
     
     private void addNewSchemaToCanonicalSchema(String fileLocation, String ns, IoSession session) throws IOException{
 		// obtener el schemas File del servidor y transformarlo a un elemento XML
-		String canonicalSchemaStr = EXIUtils.readFile(EXIUtils.exiSchemasFolder + "canonicalSchema_" + session.hashCode() + ".xsd");
+		String canonicalSchemaStr = EXIUtils.readFile(EXIUtils.exiSchemasFolder + "canonicalSchema_" + session.getAttribute("configId") + ".xsd");
 		StringBuilder canonicalSchemaStrBuilder = new StringBuilder();
 		if(canonicalSchemaStr != null && canonicalSchemaStr.indexOf("namespace") != -1){
 	        	canonicalSchemaStrBuilder = new StringBuilder(canonicalSchemaStr);
@@ -493,7 +501,7 @@ System.out.println("UPLOAD SCHEMA");
         	canonicalSchemaStrBuilder.append("\n</xs:schema>");
 		}
         
-        File canonicalSchema = new File(EXIUtils.exiSchemasFolder + "canonicalSchema_" + session.hashCode() + ".xsd");
+        File canonicalSchema = new File(EXIUtils.exiSchemasFolder + "canonicalSchema_" + session.getAttribute("configId") + ".xsd");
         BufferedWriter canonicalSchemaWriter = new BufferedWriter(new FileWriter(canonicalSchema));
         canonicalSchemaWriter.write(canonicalSchemaStrBuilder.toString());
         canonicalSchemaWriter.close();
