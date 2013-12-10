@@ -160,8 +160,10 @@ System.out.println("UPLOAD SCHEMA");
 			configId = setup.attributeValue("configurationId"); 
 			if(configId != null){
 				String agreement;
-				if(new File(EXIUtils.exiSchemasFolder + "canonicalSchema_" + configId + ".xsd").exists())
+				if(new File(EXIUtils.exiSchemasFolder + configId + ".xsd").exists()){
+					session.setAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION, EXIUtils.exiSchemasFolder + configId + ".xsd");
 					agreement = "true";
+				}
 				else{
 					agreement = "false";
 				}
@@ -320,7 +322,7 @@ System.out.println("UPLOAD SCHEMA");
 	 * @throws IOException
 	 */
 	private Element generateCanonicalSchema(Element setup, IoSession session) throws IOException {
-		File newCanonicalSchema = new File(EXIUtils.exiSchemasFolder + "canonicalSchema_" + session.getAttribute("configId") + ".xsd");
+		File newCanonicalSchema = new File(EXIUtils.exiSchemasFolder + session.getAttribute("configId") + ".xsd");
         BufferedWriter newCanonicalSchemaWriter = new BufferedWriter(new FileWriter(newCanonicalSchema));
         newCanonicalSchemaWriter.write("<?xml version='1.0' encoding='UTF-8'?> \n\n<xs:schema \n\txmlns:xs='http://www.w3.org/2001/XMLSchema' \n\ttargetNamespace='urn:xmpp:exi:cs' \n\txmlns='urn:xmpp:exi:cs' \n\telementFormDefault='qualified'>\n");
         
@@ -333,7 +335,7 @@ System.out.println("UPLOAD SCHEMA");
         newCanonicalSchemaWriter.write("\n</xs:schema>");
         newCanonicalSchemaWriter.close();
         
-        session.setAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION, newCanonicalSchema.getAbsolutePath());
+        session.setAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION, newCanonicalSchema.getCanonicalPath());
         return setup;
 	}
 	
@@ -350,7 +352,6 @@ System.out.println("UPLOAD SCHEMA");
 		try {
 			exiProcessor = new EXIProcessor((String)session.getAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION));
 		} catch (EXIException e) {
-			e.printStackTrace();
 			return false;
 		}
 		session.setAttribute(EXI_PROCESSOR, exiProcessor);

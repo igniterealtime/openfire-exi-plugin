@@ -40,8 +40,6 @@ public class EXIProcessor {
 	private static final boolean schemalessIsFragmet = false;
 	
 	public EXIProcessor(String xsdLocation) throws EXIException{
-		// TODO: eliminar la siguiente linea
-		xsdLocation = EXIUtils.exiSchemasFolder + "canonicalSchema.xsd";
 		
 		// create default factory and EXI grammar for schema
 		exiFactory = DefaultEXIFactory.newInstance();
@@ -49,12 +47,19 @@ public class EXIProcessor {
 		exiFactory.setCodingMode(CodingMode.BIT_PACKED);
 		
 		if(xsdLocation != null && new File(xsdLocation).isFile()){
-			GrammarFactory grammarFactory = GrammarFactory.newInstance();
-			Grammars g = grammarFactory.createGrammars(xsdLocation);
-			exiFactory.setGrammars(g);
+			try{
+				GrammarFactory grammarFactory = GrammarFactory.newInstance();
+				Grammars g = grammarFactory.createGrammars(xsdLocation, new SchemaResolver(EXIUtils.schemasFolder));
+				exiFactory.setGrammars(g);
+			} catch (IOException e){
+				e.printStackTrace();
+				throw new EXIException("Error while creating Grammars.");
+			}
 		}
 		else{
-			System.out.println("Invalid Schema file location. Encoding schema-less.");
+			String message = "Invalid Canonical Schema file location: " + xsdLocation;
+System.err.println(message);
+			throw new EXIException(message);
 		}
 	}
 	
