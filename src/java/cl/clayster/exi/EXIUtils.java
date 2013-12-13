@@ -2,6 +2,7 @@ package cl.clayster.exi;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -54,12 +55,22 @@ public class EXIUtils {
 		}
 	}
 	
-	public static void writeFile(String fileName, String content) throws IOException {
-		if(fileName != null && content != null){
-			FileOutputStream out = new FileOutputStream(fileName);
-			out.write(content.getBytes());
-			out.close();
+	public static boolean writeFile(String fileName, String content){
+		try {
+			if(fileName != null && content != null){
+				FileOutputStream out;
+				
+				out = new FileOutputStream(fileName);
+				out.write(content.getBytes());
+				out.close();
+				return true;
+			}
+		} catch (FileNotFoundException e) {
+			return false;
+		} catch (IOException e) {
+			return false;
 		}
+		return false;
 	}
 	
 	public static String getAttributeValue(String text, String attribute) {

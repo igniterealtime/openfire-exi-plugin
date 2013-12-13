@@ -31,7 +31,6 @@ import org.apache.xerces.impl.dv.util.Base64;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
-import org.jivesoftware.openfire.net.ClientStanzaHandler;
 import org.jivesoftware.util.JiveGlobals;
 import org.xml.sax.SAXException;
 import org.xmpp.packet.JID;
@@ -67,7 +66,7 @@ public class EXIFilter extends IoFilterAdapter {
     
     @Override
     public void messageSent(NextFilter nextFilter, IoSession session, Object message) throws Exception {
-    	
+    	/*
 		if (message instanceof ByteBuffer) {
 			ByteBuffer byteBuffer = (ByteBuffer) message;
 			String msg = new String(byteBuffer.array());
@@ -79,7 +78,9 @@ public class EXIFilter extends IoFilterAdapter {
 				message = msg.getBytes();
 			}
     	}
+    	*/
     	super.messageSent(nextFilter, session, message);
+    	
     }
     
     /**
@@ -89,43 +90,54 @@ public class EXIFilter extends IoFilterAdapter {
      */
     @Override
     public void messageReceived(NextFilter nextFilter, IoSession session, Object message) throws Exception {
+    	String msg = "";
+    	/*
+    	if(message instanceof ByteBuffer){
+    		ByteBuffer byteBuffer = (ByteBuffer) message;
+    		int currentPos = byteBuffer.position();
+            // Decode buffer
+            Charset encoder = Charset.forName("UTF-8");
+            CharBuffer charBuffer = encoder.decode(byteBuffer.buf());
+            msg = charBuffer.toString();
+			
+            if(msg.contains("</uploadSchema>")){
+				String endTag = "</uploadSchema>";
+				String startTag = msg;
+				startTag = startTag.substring(0, startTag.indexOf('>') + 1);
+	        	String contentType = EXIUtils.getAttributeValue(startTag, "contentType");
+	        	String md5Hash = EXIUtils.getAttributeValue(startTag, "md5Hash");
+	        	String bytes = EXIUtils.getAttributeValue(startTag, "bytes");
+	        	if(contentType != null && !"text".equals(contentType) && md5Hash != null && bytes != null && byteBuffer!= null){
+	        		byte[] ba = new byte[byteBuffer.array().length - startTag.getBytes().length - endTag.getBytes().length];
+	        		System.arraycopy(byteBuffer.array(), startTag.getBytes().length, ba, 0, ba.length);
+	        		uploadCompressedMissingSchema(ba, contentType, md5Hash, bytes, session);
+	        	}
+	        	else{
+	        		uploadMissingSchema((String) message, session);
+	        	}
+	        	session.getFilterChain().remove("uploadSchemaFilter");
+	        	throw new Exception("<uploadSchema> processed!!");
+			}
+            byteBuffer.position(currentPos);
+    	}*/
     	if(message instanceof String){
-    		String msg = ((String) message);
-    		if(msg.startsWith("<setup ")){
-    			String setupResponse = setupResponse((String) message, session);
-        		if(setupResponse != null){
-        			ByteBuffer bb = ByteBuffer.wrap(setupResponse.getBytes());
-        	        session.write(bb);
-        		}
-        		else{
-        			System.err.println("An error occurred while processing the negotiation.");
-        		}
-        		throw new Exception("<setup> PROCESSED!!!!!");
-    		}
-    		else if(msg.startsWith("<compress ")){
-    			if(createExiProcessor(session)){
-    				String respuesta = "<compressed xmlns='http://jabber.org/protocol/compress'/>";
-        			ByteBuffer bb = ByteBuffer.wrap(respuesta.getBytes());
-        	        session.write(bb);
-        	        addCodec(session);
-        		}
-        		else{
-        			ByteBuffer bb = ByteBuffer.wrap("<failure xmlns=\'http://jabber.org/protocol/compress\'><setup-failed/></failure>".getBytes());
-        	        session.write(bb);
-        		}
-    			throw new Exception("<compress> PROCESSED!!!!!");
-    		}
-    		else if(msg.startsWith("<uploadSchema ")){
-System.out.println("UPLOAD SCHEMA");
-    			uploadMissingSchema(msg, session);
-    			throw new Exception("<uploadSchema> processed");
-    		}
-    		else if(msg.startsWith("<downloadSchema ")){
-    			String url = EXIUtils.getAttributeValue(msg, "url");
-    			if(url != null){
-    				String respuesta = "";
-    				try{
-    					String descarga = EXIUtils.downloadXml(url);
+    		msg = ((String) message);
+			if(msg.startsWith("<setup ")){
+				String setupResponse = setupResponse((String) message, session);
+	    		if(setupResponse == null){
+	    			System.err.println("An error occurred while processing the negotiation.");
+	    		}else{
+	    			ByteBuffer bb = ByteBuffer.wrap(setupResponse.getBytes());
+	    	        session.write(bb);
+	    		}
+	    		throw new Exception("<setup> PROCESSED!!!!!");
+			}
+			else if(msg.startsWith("<downloadSchema ")){
+				String url = EXIUtils.getAttributeValue(msg, "url");
+				if(url != null){
+					String respuesta = "";
+					try{
+						String descarga = EXIUtils.downloadXml(url);
 		    			if(descarga.startsWith("<downloadSchemaResponse ")){
 		    				// error already found during download process
 		    				respuesta = descarga;
@@ -134,20 +146,32 @@ System.out.println("UPLOAD SCHEMA");
 		    				saveDownloadedSchema(descarga, session);
 		    				respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url + "' result='true'/>";
 		    			}
-    				}catch (DocumentException e){	// error while parsing the just saved file, not probable (exception makes sense while uploading)
-    					respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url
-    							+ "' result='false'><invalidContentType contentTypeReturned='text/html'/></downloadSchemaResponse>";
-    				}catch (Exception e){
-        				respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url
-        						+ "' result='false'><error message='No free space left.'/></downloadSchemaResponse>";
-        			}
+					}catch (DocumentException e){	// error while parsing the just saved file, not probable (exception makes sense while uploading)
+						respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url
+								+ "' result='false'><invalidContentType contentTypeReturned='text/html'/></downloadSchemaResponse>";
+					}catch (Exception e){
+	    				respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url
+	    						+ "' result='false'><error message='No free space left.'/></downloadSchemaResponse>";
+	    			}
 	    			session.write(ByteBuffer.wrap((respuesta).getBytes()));
 	    			throw new Exception("<downloadSchemaResponse> PROCESSED!!!!!");
-    			}
-    		}
+				}
+			}
+			else if(msg.startsWith("<compress ")){
+				if(createExiProcessor(session)){
+					String respuesta = "<compressed xmlns='http://jabber.org/protocol/compress'/>";
+	    			ByteBuffer bb = ByteBuffer.wrap(respuesta.getBytes());
+	    	        session.write(bb);
+	    	        addCodec(session);
+	    		}
+	    		else{
+	    			ByteBuffer bb = ByteBuffer.wrap("<failure xmlns=\'http://jabber.org/protocol/compress\'><setup-failed/></failure>".getBytes());
+	    	        session.write(bb);
+	    		}
+				throw new Exception("<compress> PROCESSED!!!!!");
+			}
     	}
     	super.messageReceived(nextFilter, session, message);
-    	
     }
 
 /** Setup **/
@@ -155,7 +179,9 @@ System.out.println("UPLOAD SCHEMA");
 	private String setupResponse(String message, IoSession session){
 		String setupResponse = null;
 		String configId = "";
-		try{
+		
+		//quick setup
+		try{	 
 			Element setup = DocumentHelper.parseText((String) message).getRootElement();
 			configId = setup.attributeValue("configurationId"); 
 			if(configId != null){
@@ -173,12 +199,14 @@ System.out.println("UPLOAD SCHEMA");
 			e.printStackTrace();
 		}
 		
-		try {
-			generateSchemasFile(EXIUtils.schemasFolder);
-		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
+		if(!new File(EXIUtils.schemasFileLocation).exists()){
+			try {
+				generateSchemasFile(EXIUtils.schemasFolder);
+			} catch (NoSuchAlgorithmException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 		
 		try {
@@ -217,15 +245,17 @@ System.out.println("UPLOAD SCHEMA");
 	        	}
 	        }
 	        setup.addAttribute("agreement", String.valueOf(agreement));
-	        // TODO: solucionar lo del orden de los import en el canonicalSchema (ns: http://www.w3.org/XML/1998/namespace no puede ir primero??!)
 	        configId = UUID.randomUUID().toString();
 	        session.setAttribute("configId", configId);
 	        
-	        serverSchemas = generateCanonicalSchema(serverSchemas, session);
+	        serverSchemas = createCanonicalSchema(serverSchemas, session);
 	        setup.setName("setupResponse");
 	        setup.addAttribute("configurationId", configId);
 	        setupResponse = setup.asXML();
 	        
+	        if(!agreement){
+	        	session.getFilterChain().addBefore("xmpp", "uploadSchemaFilter", new UploadSchemaFilter(this));
+	        }
 	        
 		} catch (FileNotFoundException e1) {
 			return null;
@@ -321,7 +351,7 @@ System.out.println("UPLOAD SCHEMA");
 	 * @param schemasStanzas
 	 * @throws IOException
 	 */
-	private Element generateCanonicalSchema(Element setup, IoSession session) throws IOException {
+	private Element createCanonicalSchema(Element setup, IoSession session) throws IOException {
 		File newCanonicalSchema = new File(EXIUtils.exiSchemasFolder + session.getAttribute("configId") + ".xsd");
         BufferedWriter newCanonicalSchemaWriter = new BufferedWriter(new FileWriter(newCanonicalSchema));
         newCanonicalSchemaWriter.write("<?xml version='1.0' encoding='UTF-8'?> \n\n<xs:schema \n\txmlns:xs='http://www.w3.org/2001/XMLSchema' \n\ttargetNamespace='urn:xmpp:exi:cs' \n\txmlns='urn:xmpp:exi:cs' \n\telementFormDefault='qualified'>\n");
@@ -363,9 +393,8 @@ System.out.println("UPLOAD SCHEMA");
      * @param session the IoSession where the EXI encoder and decoder will be added to.
      */
     private void addCodec(IoSession session){
-		session.getFilterChain().addBefore("xmpp", "exiDecoder", new EXIDecoderFilter());
+		session.getFilterChain().addBefore("xmpp", "exiDecoder", new EXICodecFilter());
     	session.getFilterChain().remove(EXIFilter.filterName);	
-    	sessions.put(((ClientStanzaHandler) session.getAttribute("HANDLER")).getAddress(), session);
         return;
     }
     
@@ -385,42 +414,52 @@ System.out.println("UPLOAD SCHEMA");
      * @throws SAXException 
      * @throws EXIException 
      */
-    private void uploadMissingSchema(String content, IoSession session) 
+    void uploadMissingSchema(String content, IoSession session) 
     		throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException{
     	String filePath = EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
     	OutputStream out = new FileOutputStream(filePath);
-    	String md5Hash = null;
-		String bytes = null;
     	
-    	String attributes = content.substring(0, content.indexOf('>') + 1);
     	content = content.substring(content.indexOf('>') + 1, content.indexOf("</"));
-    	String contentType = EXIUtils.getAttributeValue(attributes, "contentType");
-    	md5Hash = EXIUtils.getAttributeValue(attributes, "md5Hash");
-		bytes = EXIUtils.getAttributeValue(attributes, "bytes");
-		
 		byte[] outputBytes = content.getBytes();
 		
-    	if((contentType != null && !contentType.equals("text")) && md5Hash != null && bytes != null){
-			if(contentType.equals("ExiBody")){
-    			content = EXIProcessor.decodeSchemaless(content.getBytes());
-    			outputBytes = content.getBytes();
-    		}
-    		else if(contentType.equals("ExiDocument")){
-    			// TODO
-    		}
-    		
-    	}
-    	else {
-	    	outputBytes = Base64.decode(content);
-    	}
+    	outputBytes = Base64.decode(content);
     	out.write(outputBytes);
     	out.close();
+    	
+		String ns = addNewSchemaToSchemasFile(filePath, null, null);
+		addNewSchemaToCanonicalSchema(filePath, ns, session);
+	}
+    
+    void uploadCompressedMissingSchema(byte[] content, String contentType, String md5Hash, String bytes, IoSession session) 
+    		throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException{
+    	String filePath = EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
+		
+    	if(!"text".equals(contentType) && md5Hash != null && bytes != null){
+			if(contentType.equals("ExiDocument")){
+    			String xml = EXIProcessor.decodeSchemaless(content);
+    			EXIUtils.writeFile(filePath, xml);
+    		}
+    		else if(contentType.equals("ExiBody")){
+    			// TODO
+    		}	
+    	}
     	
 		String ns = addNewSchemaToSchemasFile(filePath, md5Hash, bytes);
 		addNewSchemaToCanonicalSchema(filePath, ns, session);
 	}
     
-    private String addNewSchemaToSchemasFile(String fileLocation, String md5Hash, String bytes) throws NoSuchAlgorithmException, IOException, DocumentException {
+    /**
+     * Saves an uploaded schema to a file. It also processes its md5Hash value and the length in bytes when those parameters are null (for base64 encoded files).
+     * 
+     * @param fileLocation
+     * @param md5Hash md5Hash for the file content for compressed files or null for base64 files
+     * @param bytes number of the file's bytes for compressed files or null for base64 files
+     * @return the namespace of the schema being saved
+     * @throws NoSuchAlgorithmException
+     * @throws IOException
+     * @throws DocumentException
+     */
+    String addNewSchemaToSchemasFile(String fileLocation, String md5Hash, String bytes) throws NoSuchAlgorithmException, IOException, DocumentException {
     	MessageDigest md = MessageDigest.getInstance("MD5");
     	File file = new File(fileLocation);
     	if(md5Hash == null || bytes == null){
@@ -482,9 +521,9 @@ System.out.println("UPLOAD SCHEMA");
 		return ns;
 	}
     
-    private void addNewSchemaToCanonicalSchema(String fileLocation, String ns, IoSession session) throws IOException{
+    void addNewSchemaToCanonicalSchema(String fileLocation, String ns, IoSession session) throws IOException{
 		// obtener el schemas File del servidor y transformarlo a un elemento XML
-		String canonicalSchemaStr = EXIUtils.readFile(EXIUtils.exiSchemasFolder + "canonicalSchema_" + session.getAttribute("configId") + ".xsd");
+		String canonicalSchemaStr = EXIUtils.readFile(EXIUtils.exiSchemasFolder + session.getAttribute("configId") + ".xsd");
 		StringBuilder canonicalSchemaStrBuilder = new StringBuilder();
 		if(canonicalSchemaStr != null && canonicalSchemaStr.indexOf("namespace") != -1){
 	        	canonicalSchemaStrBuilder = new StringBuilder(canonicalSchemaStr);
@@ -504,7 +543,7 @@ System.out.println("UPLOAD SCHEMA");
         	canonicalSchemaStrBuilder.append("\n</xs:schema>");
 		}
         
-        File canonicalSchema = new File(EXIUtils.exiSchemasFolder + "canonicalSchema_" + session.getAttribute("configId") + ".xsd");
+        File canonicalSchema = new File(EXIUtils.exiSchemasFolder + session.getAttribute("configId") + ".xsd");
         BufferedWriter canonicalSchemaWriter = new BufferedWriter(new FileWriter(canonicalSchema));
         canonicalSchemaWriter.write(canonicalSchemaStrBuilder.toString());
         canonicalSchemaWriter.close();

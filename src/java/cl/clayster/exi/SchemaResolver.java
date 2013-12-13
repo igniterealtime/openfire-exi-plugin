@@ -53,7 +53,7 @@ public class SchemaResolver implements XMLEntityResolver {
         			+ "\n\t" + this.canonicalPaths.get(entry.getKey()) 
         			+ "\n\t" + this.names.get(entry.getKey()));   	
         }
-        */
+        /**/
 	}
 	
 	@Override
