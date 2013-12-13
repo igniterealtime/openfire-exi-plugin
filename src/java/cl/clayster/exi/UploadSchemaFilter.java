@@ -63,7 +63,10 @@ public class UploadSchemaFilter extends IoFilterAdapter {
             	throw new Exception("Upload processed!!");
             }
             else if(startTag.contains("</setup>")){
-            	//if(startTag.startsWith("setup"))	startTag = "<".concat(startTag);
+            	exiFilter.messageReceived(nextFilter, session, startTag);
+            	return;
+            }
+            else if(startTag.contains("</compress>")){
             	session.getFilterChain().remove("uploadSchemaFilter");
             	exiFilter.messageReceived(nextFilter, session, startTag);
             	return;

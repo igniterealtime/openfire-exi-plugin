@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
+import java.io.UnsupportedEncodingException;
 
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
@@ -100,9 +101,10 @@ System.err.println(message);
 	 * @return a String containing the decoded XML
 	 * @throws IOException
 	 * @throws EXIException
+	 * @throws UnsupportedEncodingException 
 	 * @throws SAXException
 	 */
-	public static String decodeSchemaless(byte[] exi) throws TransformerException, EXIException{
+	public static String decodeSchemaless(byte[] exi) throws TransformerException, EXIException, UnsupportedEncodingException{
 		TransformerFactory tf = TransformerFactory.newInstance();
 		Transformer transformer = tf.newTransformer();
 		
@@ -118,7 +120,7 @@ System.err.println(message);
 		ByteArrayOutputStream xmlDecoded = new ByteArrayOutputStream();
 		transformer.transform(exiSource, new StreamResult(xmlDecoded));
 
-		return xmlDecoded.toString();
+		return xmlDecoded.toString("UTF-8");
 	}
 	
 	/**
@@ -168,6 +170,6 @@ System.err.println(message);
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		transformer.transform(exiSource, new StreamResult(baos));
 		
-		return baos.toString();
+		return baos.toString("UTF-8");
 	}
 }
