@@ -10,6 +10,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.DigestInputStream;
@@ -64,23 +65,21 @@ public class EXIFilter extends IoFilterAdapter {
         JiveGlobals.setProperty("plugin.xmldebugger.", Boolean.toString(enabled)); 
     }
     
+    private boolean exiMethod = true;
+    
     @Override
-    public void messageSent(NextFilter nextFilter, IoSession session, Object message) throws Exception {
-    	/*
-		if (message instanceof ByteBuffer) {
-			ByteBuffer byteBuffer = (ByteBuffer) message;
-			String msg = new String(byteBuffer.array());
-			if(msg.startsWith("<stream:features") && msg.contains("</compression>")){
-				int i = msg.indexOf("</compression>");
-				msg = msg.substring(0, i)
-						.concat("<method>exi</method>")
-						.concat(msg.substring(i, msg.length()));
-				message = msg.getBytes();
-			}
+    public void filterWrite(NextFilter nextFilter, IoSession session, WriteRequest writeRequest) throws Exception {
+    	if(exiMethod && writeRequest.getMessage() instanceof ByteBuffer){
+    		int currentPos = ((ByteBuffer) writeRequest.getMessage()).position();
+    		String msg = Charset.forName("UTF-8").decode(((ByteBuffer) writeRequest.getMessage()).buf()).toString();
+    		((ByteBuffer) writeRequest.getMessage()).position(currentPos);
+    		if(msg.contains("</compression>")){
+    			msg = msg.replace("</compression>", "<method>exi</method></compression>");
+    			writeRequest = new WriteRequest(ByteBuffer.wrap(msg.getBytes()), writeRequest.getFuture(), writeRequest.getDestination());
+    			exiMethod = false;
+    		}
     	}
-    	*/
-    	super.messageSent(nextFilter, session, message);
-    	
+    	super.filterWrite(nextFilter, session, writeRequest);
     }
     
     /**
@@ -91,35 +90,6 @@ public class EXIFilter extends IoFilterAdapter {
     @Override
     public void messageReceived(NextFilter nextFilter, IoSession session, Object message) throws Exception {
     	String msg = "";
-    	/*
-    	if(message instanceof ByteBuffer){
-    		ByteBuffer byteBuffer = (ByteBuffer) message;
-    		int currentPos = byteBuffer.position();
-            // Decode buffer
-            Charset encoder = Charset.forName("UTF-8");
-            CharBuffer charBuffer = encoder.decode(byteBuffer.buf());
-            msg = charBuffer.toString();
-			
-            if(msg.contains("</uploadSchema>")){
-				String endTag = "</uploadSchema>";
-				String startTag = msg;
-				startTag = startTag.substring(0, startTag.indexOf('>') + 1);
-	        	String contentType = EXIUtils.getAttributeValue(startTag, "contentType");
-	        	String md5Hash = EXIUtils.getAttributeValue(startTag, "md5Hash");
-	        	String bytes = EXIUtils.getAttributeValue(startTag, "bytes");
-	        	if(contentType != null && !"text".equals(contentType) && md5Hash != null && bytes != null && byteBuffer!= null){
-	        		byte[] ba = new byte[byteBuffer.array().length - startTag.getBytes().length - endTag.getBytes().length];
-	        		System.arraycopy(byteBuffer.array(), startTag.getBytes().length, ba, 0, ba.length);
-	        		uploadCompressedMissingSchema(ba, contentType, md5Hash, bytes, session);
-	        	}
-	        	else{
-	        		uploadMissingSchema((String) message, session);
-	        	}
-	        	session.getFilterChain().remove("uploadSchemaFilter");
-	        	throw new Exception("<uploadSchema> processed!!");
-			}
-            byteBuffer.position(currentPos);
-    	}*/
     	if(message instanceof String){
     		msg = ((String) message);
 			if(msg.startsWith("<setup ")){
