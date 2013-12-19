@@ -22,6 +22,7 @@ import org.xml.sax.helpers.XMLReaderFactory;
 
 import com.siemens.ct.exi.CodingMode;
 import com.siemens.ct.exi.EXIFactory;
+import com.siemens.ct.exi.EncodingOptions;
 import com.siemens.ct.exi.FidelityOptions;
 import com.siemens.ct.exi.GrammarFactory;
 import com.siemens.ct.exi.api.sax.EXIResult;
@@ -36,16 +37,19 @@ public class EXIProcessor {
 	static EXIResult exiResult;
 	static SAXSource exiSource;
 	
-	private static final CodingMode schemalessCodingMode = CodingMode.BIT_PACKED;
-	private static final FidelityOptions schemalessFidelityOptions = FidelityOptions.createDefault();
-	private static final boolean schemalessIsFragmet = false;
+	private static final CodingMode defaultCodingMode = CodingMode.BIT_PACKED;
+	private static final FidelityOptions defaultFidelityOptions = FidelityOptions.createDefault();
+	static final boolean defaultIsFragmet = false;
+	static final int defaultBlockSize = 1000000;
+	static final boolean defaultStrict = false;
 	
-	public EXIProcessor(String xsdLocation) throws EXIException{
-		
+	public EXIProcessor(String xsdLocation, Integer blockSize, Boolean strict) throws EXIException{
 		// create default factory and EXI grammar for schema
 		exiFactory = DefaultEXIFactory.newInstance();
-		exiFactory.setFidelityOptions(FidelityOptions.createAll());
+		if(strict == null)	strict = defaultStrict;
+		exiFactory.setFidelityOptions(strict ? FidelityOptions.createStrict():FidelityOptions.createAll());
 		exiFactory.setCodingMode(CodingMode.BIT_PACKED);
+		exiFactory.setBlockSize(blockSize != null ? blockSize : defaultBlockSize);
 		
 		if(xsdLocation != null && new File(xsdLocation).isFile()){
 			try{
@@ -65,22 +69,26 @@ System.err.println(message);
 	}
 	
 	/**
-	 * Encodes an XML String into an EXI byte array using no schema files.
+	 * Encodes an XML String into an EXI byte array using no schema files and default {@link EncodingOptions} and {@link FidelityOptions}.
 	 * 
 	 * @param xml the String to be encoded
 	 * @return a byte array containing the encoded bytes
+	 * @param cookie if the encoding should include EXI Cookie or not
 	 * @throws IOException
 	 * @throws EXIException
 	 * @throws SAXException
 	 */
-	public static byte[] encodeSchemaless(String xml) throws IOException, EXIException, SAXException{
+	public static byte[] encodeSchemaless(String xml, boolean cookie) throws IOException, EXIException, SAXException{
 		ByteArrayOutputStream osEXI = new ByteArrayOutputStream();
 		// start encoding process
 		EXIFactory factory = DefaultEXIFactory.newInstance();
-		schemalessFidelityOptions.setFidelity(FidelityOptions.FEATURE_PREFIX, true);
-		factory.setFidelityOptions(schemalessFidelityOptions);
-		factory.setCodingMode(schemalessCodingMode);
-		factory.setFragment(schemalessIsFragmet);
+		defaultFidelityOptions.setFidelity(FidelityOptions.FEATURE_PREFIX, true);
+		factory.setFidelityOptions(defaultFidelityOptions);
+		factory.setCodingMode(defaultCodingMode);
+		factory.setFragment(defaultIsFragmet);
+		factory.setBlockSize(defaultBlockSize);
+		
+		if(cookie)	factory.getEncodingOptions().setOption(EncodingOptions.INCLUDE_COOKIE);
 		
 		XMLReader xmlReader = XMLReaderFactory.createXMLReader();
 		EXIResult exiResult = new EXIResult(factory);
@@ -109,10 +117,11 @@ System.err.println(message);
 		Transformer transformer = tf.newTransformer();
 		
 		EXIFactory factory = DefaultEXIFactory.newInstance();
-		schemalessFidelityOptions.setFidelity(FidelityOptions.FEATURE_PREFIX, true);
-		factory.setFidelityOptions(schemalessFidelityOptions);
-		factory.setCodingMode(schemalessCodingMode);
-		factory.setFragment(schemalessIsFragmet);
+		defaultFidelityOptions.setFidelity(FidelityOptions.FEATURE_PREFIX, true);
+		factory.setFidelityOptions(defaultFidelityOptions);
+		factory.setCodingMode(defaultCodingMode);
+		factory.setFragment(defaultIsFragmet);
+		factory.setBlockSize(defaultBlockSize);
 		
 		SAXSource exiSource = new SAXSource(new InputSource(new ByteArrayInputStream(exi)));
 		exiSource.setXMLReader(factory.createEXIReader());

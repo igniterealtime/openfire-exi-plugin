@@ -65,18 +65,15 @@ public class EXIFilter extends IoFilterAdapter {
         JiveGlobals.setProperty("plugin.xmldebugger.", Boolean.toString(enabled)); 
     }
     
-    private boolean exiMethod = true;
-    
     @Override
     public void filterWrite(NextFilter nextFilter, IoSession session, WriteRequest writeRequest) throws Exception {
-    	if(exiMethod && writeRequest.getMessage() instanceof ByteBuffer){
+    	if(writeRequest.getMessage() instanceof ByteBuffer){
     		int currentPos = ((ByteBuffer) writeRequest.getMessage()).position();
     		String msg = Charset.forName("UTF-8").decode(((ByteBuffer) writeRequest.getMessage()).buf()).toString();
     		((ByteBuffer) writeRequest.getMessage()).position(currentPos);
     		if(msg.contains("</compression>")){
     			msg = msg.replace("</compression>", "<method>exi</method></compression>");
     			writeRequest = new WriteRequest(ByteBuffer.wrap(msg.getBytes()), writeRequest.getFuture(), writeRequest.getDestination());
-    			exiMethod = false;
     		}
     	}
     	super.filterWrite(nextFilter, session, writeRequest);
@@ -144,15 +141,24 @@ public class EXIFilter extends IoFilterAdapter {
     	super.messageReceived(nextFilter, session, message);
     }
 
-/** Setup **/
-
+    
+/**
+ * Parses a <setup> stanza sent by the client and generates a corresponding <setupResponse> stanza. It also creates a Configuration Id, which is
+ * a UUID followed by '-'; 1 or 0 depending if the configuration is <b>strict</b> or not; and the <b>block size</b> for the EXI Options to use. 
+ * @param message A <code>String</code> containing the setup stanza
+ * @param session the IoSession that represents the connection to the client
+ * @return
+ */
 	private String setupResponse(String message, IoSession session){
 		String setupResponse = null;
 		String configId = "";
+		Integer blockSize = EXIProcessor.defaultBlockSize;
+		Boolean strict = EXIProcessor.defaultStrict;
 		
 		//quick setup
 		try{	 
 			Element setup = DocumentHelper.parseText((String) message).getRootElement();
+			
 			configId = setup.attributeValue("configurationId"); 
 			if(configId != null){
 				String agreement;
@@ -190,6 +196,8 @@ public class EXIFilter extends IoFilterAdapter {
 			
 	        // transformar el <setup> recibido en un documento xml
 	        Element setup = DocumentHelper.parseText((String) message).getRootElement();
+	        
+	        
     		boolean missingSchema;
     		Element auxSchema1, auxSchema2;
     		String ns, bytes, md5Hash;
@@ -214,10 +222,22 @@ public class EXIFilter extends IoFilterAdapter {
 	        		if(agreement)	agreement = false;
 	        	}
 	        }
-	        setup.addAttribute("agreement", String.valueOf(agreement));
-	        configId = UUID.randomUUID().toString();
+	        // guardar el valor de blockSize y strict en session
+	        String aux = setup.attributeValue("blockSize");
+			if(aux != null || "".equals(aux)){
+				blockSize = Integer.parseInt(aux);
+				session.setAttribute(EXIUtils.BLOCK_SIZE, blockSize);
+			}
+			aux = setup.attributeValue("strict");
+			if(aux != null || "".equals(aux)){
+				strict = Boolean.valueOf(aux);
+				session.setAttribute(EXIUtils.STRICT, strict);
+			}
+	        // crear el configId
+	        configId = UUID.randomUUID().toString() + '-' + (strict?"1":"0") + blockSize;
 	        session.setAttribute("configId", configId);
 	        
+	        setup.addAttribute("agreement", String.valueOf(agreement));
 	        serverSchemas = createCanonicalSchema(serverSchemas, session);
 	        setup.setName("setupResponse");
 	        setup.addAttribute("configurationId", configId);
@@ -350,7 +370,9 @@ public class EXIFilter extends IoFilterAdapter {
     private boolean createExiProcessor(IoSession session){
         EXIProcessor exiProcessor;
 		try {
-			exiProcessor = new EXIProcessor((String)session.getAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION));
+			Object blockSize = session.getAttribute(EXIUtils.BLOCK_SIZE);
+			Object strict = session.getAttribute(EXIUtils.STRICT);
+			exiProcessor = new EXIProcessor((String)session.getAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION), (Integer)blockSize, (Boolean)strict);		
 		} catch (EXIException e) {
 			return false;
 		}

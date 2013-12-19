@@ -28,6 +28,8 @@ public class EXIUtils {
 	final protected static String schemasFolder = "C:/Users/Javier/workspace/Personales/openfire/target/openfire/plugins/exi/res/";
 	final protected static String schemasFileLocation = "C:/Users/Javier/workspace/Personales/openfire/target/openfire/plugins/exi/res/exiSchemas/schemas.xml";
 	final protected static String CANONICAL_SCHEMA_LOCATION = "canonicalSchemaLocation";
+	final protected static String BLOCK_SIZE = "blockSize";
+	final protected static String STRICT = "strict";
 	
 	final protected static char[] hexArray = "0123456789abcdef".toCharArray();
 	
