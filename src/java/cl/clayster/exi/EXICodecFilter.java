@@ -53,39 +53,37 @@ public class EXICodecFilter extends IoFilterAdapter {
 			else{
 				byte[] dest = new byte[exiBytes.length + byteBuffer.limit()];
 				System.arraycopy(exiBytes, 0, dest, 0, exiBytes.length);
-				System.arraycopy(byteBuffer.array(), 0, dest, exiBytes.length, byteBuffer.capacity());
-				exiBytes = dest;
+				System.arraycopy(byteBuffer.array(), 0, dest, exiBytes.length, byteBuffer.limit());
+				exiBytes = dest;				
 			}
 			if(EXIProcessor.isEXI(exiBytes[0])){
-				if(exiBytes.length > 3){
-					// Decode EXI bytes
-System.out.println("Decoding EXI message: " + EXIUtils.bytesToHex(exiBytes));
-//TODO: reemplazar substring(38) de una forma bonita (elimina <?xml version=1.0.......)
-					try{
+				// Decode EXI bytes
+				try{
+					//TODO: reemplazar substring(38) de una forma bonita (elimina <?xml version=1.0.......)
 						xml = ((EXIProcessor) session.getAttribute(EXIFilter.EXI_PROCESSOR)).decodeBytes(exiBytes).substring(38);
-System.out.println("EXIDECODED (" + session.hashCode() + "): " + xml);
-					} catch (Exception e){
-						e.printStackTrace();
-					}
-					session.setAttribute("exiBytes", null);	// los bytes antiguos ya fueron usados con el utlimo mensaje
-					
-					if(xml.startsWith("<exi:streamStart ")){
-						String streamStart = " <exi:streamStart from='"
-								+ JiveGlobals.getProperty("xmpp.domain", "127.0.0.1").toLowerCase()
-								+ "' version='1.0' xml:lang='en' xmlns:exi='http://jabber.org/protocol/compress/exi'>"
-								+ "<exi:xmlns prefix='' namespace='jabber:client'/><exi:xmlns prefix='streams' namespace='http://etherx.jabber.org/streams'/>"
-								+ "<exi:xmlns prefix='exi' namespace='http://jabber.org/protocol/compress/exi'/></exi:streamStart>";
-						session.write(ByteBuffer.wrap(streamStart.getBytes()));
-						throw new Exception("<exi:streamStart> PROCESSED!!!!!");
-					}
-					else if(xml.startsWith("<exi:streamEnd ")){
-						xml = "</stream:stream>";
-						session.write(exiBytes);
-					}
-		            super.messageReceived(nextFilter, session, ByteBuffer.wrap(xml.getBytes()));
-		            return;
+System.out.println("EXIDECODED (" + xml.length() + "): " + xml);
+				} catch (Exception e){					
+					session.setAttribute("exiBytes", exiBytes);
+					super.messageReceived(nextFilter, session, ByteBuffer.wrap("".getBytes()));
+					return;
 				}
-				session.setAttribute("exiBytes", exiBytes);
+				session.setAttribute("exiBytes", null);	// los bytes antiguos ya fueron usados con el utlimo mensaje
+				
+				if(xml.startsWith("<exi:streamStart ")){
+					String streamStart = " <exi:streamStart from='"
+							+ JiveGlobals.getProperty("xmpp.domain", "127.0.0.1").toLowerCase()
+							+ "' version='1.0' xml:lang='en' xmlns:exi='http://jabber.org/protocol/compress/exi'>"
+							+ "<exi:xmlns prefix='' namespace='jabber:client'/><exi:xmlns prefix='streams' namespace='http://etherx.jabber.org/streams'/>"
+							+ "<exi:xmlns prefix='exi' namespace='http://jabber.org/protocol/compress/exi'/></exi:streamStart>";
+					session.write(ByteBuffer.wrap(streamStart.getBytes()));
+					throw new Exception("<exi:streamStart> PROCESSED!!!!!");
+				}
+				else if(xml.startsWith("<exi:streamEnd ")){
+					xml = "</stream:stream>";
+					session.write(exiBytes);
+				}
+	            super.messageReceived(nextFilter, session, ByteBuffer.wrap(xml.getBytes()));
+	            return;
             }
 			super.messageReceived(nextFilter, session, message);
         }

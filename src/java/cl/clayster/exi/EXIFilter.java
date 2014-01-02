@@ -86,11 +86,16 @@ public class EXIFilter extends IoFilterAdapter {
      */
     @Override
     public void messageReceived(NextFilter nextFilter, IoSession session, Object message) throws Exception {
-    	String msg = "";
     	if(message instanceof String){
-    		msg = ((String) message);
-			if(msg.startsWith("<setup ")){
-				String setupResponse = setupResponse((String) message, session);
+    		Element msg = null;
+    		try{
+    			msg = DocumentHelper.parseText((String) message).getRootElement();
+    		} catch (DocumentException e){
+    			super.messageReceived(nextFilter, session, message);
+    			return;
+    		}
+			if(msg.getName().equals("setup")){
+				String setupResponse = setupResponse(msg, session);
 	    		if(setupResponse == null){
 	    			System.err.println("An error occurred while processing the negotiation.");
 	    		}else{
@@ -99,8 +104,8 @@ public class EXIFilter extends IoFilterAdapter {
 	    		}
 	    		throw new Exception("<setup> PROCESSED!!!!!");
 			}
-			else if(msg.startsWith("<downloadSchema ")){
-				String url = EXIUtils.getAttributeValue(msg, "url");
+			else if(msg.getName().equals(("downloadSchema"))){
+				String url = msg.attributeValue("null", "url");
 				if(url != null){
 					String respuesta = "";
 					try{
@@ -124,7 +129,7 @@ public class EXIFilter extends IoFilterAdapter {
 	    			throw new Exception("<downloadSchemaResponse> PROCESSED!!!!!");
 				}
 			}
-			else if(msg.startsWith("<compress ")){
+			else if(msg.getName().equals("compress")){
 				if(createExiProcessor(session)){
 					String respuesta = "<compressed xmlns='http://jabber.org/protocol/compress'/>";
 	    			ByteBuffer bb = ByteBuffer.wrap(respuesta.getBytes());
@@ -149,30 +154,24 @@ public class EXIFilter extends IoFilterAdapter {
  * @param session the IoSession that represents the connection to the client
  * @return
  */
-	private String setupResponse(String message, IoSession session){
+	private String setupResponse(Element setup, IoSession session){
 		String setupResponse = null;
 		String configId = "";
 		Integer blockSize = EXIProcessor.defaultBlockSize;
 		Boolean strict = EXIProcessor.defaultStrict;
 		
-		//quick setup
-		try{	 
-			Element setup = DocumentHelper.parseText((String) message).getRootElement();
-			
-			configId = setup.attributeValue("configurationId"); 
-			if(configId != null){
-				String agreement;
-				if(new File(EXIUtils.exiSchemasFolder + configId + ".xsd").exists()){
-					session.setAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION, EXIUtils.exiSchemasFolder + configId + ".xsd");
-					agreement = "true";
-				}
-				else{
-					agreement = "false";
-				}
-				return "<setupResponse xmlns='http://jabber.org/protocol/compress/exi' agreement='" + agreement + "' configurationId='" + configId + "'/>";
+		//quick setup	 
+		configId = setup.attributeValue("configurationId"); 
+		if(configId != null){
+			String agreement;
+			if(new File(EXIUtils.exiSchemasFolder + configId + ".xsd").exists()){
+				session.setAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION, EXIUtils.exiSchemasFolder + configId + ".xsd");
+				agreement = "true";
 			}
-		} catch (DocumentException e){
-			e.printStackTrace();
+			else{
+				agreement = "false";
+			}
+			return "<setupResponse xmlns='http://jabber.org/protocol/compress/exi' agreement='" + agreement + "' configurationId='" + configId + "'/>";
 		}
 		
 		if(!new File(EXIUtils.schemasFileLocation).exists()){
@@ -192,11 +191,7 @@ public class EXIFilter extends IoFilterAdapter {
 	        if(schemasFileContent == null){
 	        	return null;
 	        }
-	        serverSchemas = DocumentHelper.parseText(schemasFileContent).getRootElement();
-			
-	        // transformar el <setup> recibido en un documento xml
-	        Element setup = DocumentHelper.parseText((String) message).getRootElement();
-	        
+	        serverSchemas = DocumentHelper.parseText(schemasFileContent).getRootElement();	        
 	        
     		boolean missingSchema;
     		Element auxSchema1, auxSchema2;

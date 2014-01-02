@@ -87,7 +87,6 @@ System.err.println(message);
 		factory.setCodingMode(defaultCodingMode);
 		factory.setFragment(defaultIsFragmet);
 		factory.setBlockSize(defaultBlockSize);
-		
 		if(cookie)	factory.getEncodingOptions().setOption(EncodingOptions.INCLUDE_COOKIE);
 		
 		XMLReader xmlReader = XMLReaderFactory.createXMLReader();
@@ -122,6 +121,7 @@ System.err.println(message);
 		factory.setCodingMode(defaultCodingMode);
 		factory.setFragment(defaultIsFragmet);
 		factory.setBlockSize(defaultBlockSize);
+		if(!isEXI(exi[0]))	factory.getEncodingOptions().setOption(EncodingOptions.INCLUDE_COOKIE);
 		
 		SAXSource exiSource = new SAXSource(new InputSource(new ByteArrayInputStream(exi)));
 		exiSource.setXMLReader(factory.createEXIReader());
@@ -142,6 +142,10 @@ System.err.println(message);
 		byte distinguishingBits = -128;
 		byte aux = (byte) (b & distinguishingBits);
 		return aux == distinguishingBits;
+	}
+	
+	public static boolean hasEXICookie(byte[] ba){
+		return "$EXI".equals(new String(ba));
 	}
 	
 	public ByteBuffer encodeByteBuffer(String xml) throws IOException, EXIException, SAXException, TransformerException{
