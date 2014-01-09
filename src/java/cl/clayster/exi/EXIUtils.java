@@ -11,8 +11,8 @@ import java.net.MalformedURLException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.nio.file.Files;
 
+import org.apache.commons.io.FileUtils;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 
@@ -51,7 +51,7 @@ public class EXIUtils {
 	
 	public static String readFile(String fileLocation){
 		try{
-			return new String(Files.readAllBytes(new File(fileLocation).toPath()));
+			return FileUtils.readFileToString(new File(fileLocation));
 		}catch (IOException e) {
 			return null;
 		}
@@ -137,5 +137,45 @@ public class EXIUtils {
 		
 		return ("<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url
 					+ "' result='false'>" + responseContent + "</downloadSchemaResponse>");
+	}
+	
+	/**
+	 * Returns the index within <code>data</code> of the first occurence of <code>pattern</code>.
+	 * @param data the byte[] where to look for the pattern
+	 * @param pattern the pattern to look for within data
+	 * @return the index where pattern was found or -1 if it was not found
+	 */
+	public static int indexOf(byte[] data, byte[] pattern){
+		int index = -1;
+		int count = 0;
+		if(!(data == null || pattern == null || data.length < 1 || pattern.length < 1) && data.length >= pattern.length){
+			for(index = 0 ; index <= data.length-pattern.length ; index++){
+				if(data[index] == pattern[0]){
+					count = 1;
+					for(int p = 1 ; p < pattern.length ; p++){
+						if(data[index + p] != pattern[p])	break;
+						count++;
+					}
+					if(count == pattern.length)	break;
+				}
+			}
+			if(count < pattern.length)	index = -1;
+		}		
+		return index;
+	}
+	
+	/**
+	 * Returns a new byte array, which is the result of concatenating a and b.
+	 * @param a the first part of the resulting byte array
+	 * @param b the second part of the resulting byte array
+	 * @return the resulting byte array
+	 */
+	public static byte[] concat(byte[] a, byte[] b){
+		if(a == null || a.length == 0)	return b;
+		if(b == null || b.length == 0)	return a;
+		byte[] c = new byte[a.length + b.length];
+		System.arraycopy(a, 0, c, 0, a.length);
+		System.arraycopy(b, 0, c, a.length, b.length);
+		return c;
 	}
 }

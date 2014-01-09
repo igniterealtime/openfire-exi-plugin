@@ -3,6 +3,7 @@ package cl.clayster.exi;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -11,8 +12,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -25,6 +24,7 @@ import java.util.UUID;
 
 import javax.xml.transform.TransformerException;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.mina.common.ByteBuffer;
 import org.apache.mina.common.IoFilterAdapter;
 import org.apache.mina.common.IoSession;
@@ -264,6 +264,12 @@ public class EXIFilter extends IoFilterAdapter {
 	 */
 	private void generateSchemasFile(String folderLocation) throws NoSuchAlgorithmException, IOException {
 		File folder = new File(folderLocation);
+		if(!folder.exists()){
+			folder.mkdir();
+		}
+		if(!new File(EXIUtils.exiSchemasFolder).exists()){
+			new File(EXIUtils.exiSchemasFolder).mkdir();
+		}
         File[] listOfFiles = folder.listFiles();
         File file;
         String fileLocation;
@@ -290,7 +296,7 @@ public class EXIFilter extends IoFilterAdapter {
 					StringBuilder sb = new StringBuilder();
 	            	
 					if(fileLocation == null)	break;
-					is = Files.newInputStream(Paths.get(fileLocation));
+					is = new FileInputStream(fileLocation);
 					dis = new DigestInputStream(is, md);
 					
 					// leer el archivo y guardarlo en sb
@@ -315,7 +321,7 @@ public class EXIFilter extends IoFilterAdapter {
 					schemasStanzas.put(namespace, "<schema ns='" + namespace + "' bytes='" + file.length() + "' md5Hash='" + md5Hash + "' schemaLocation='" + fileLocation + "'/>");
             	}
 			}
-            //variables to write the stanzas and canonicalSchema files
+            //variables to write the schemas files
             BufferedWriter stanzasWriter = null;
             File stanzasFile = new File(EXIUtils.schemasFileLocation);
             stanzasWriter = new BufferedWriter(new FileWriter(stanzasFile));
@@ -369,6 +375,7 @@ public class EXIFilter extends IoFilterAdapter {
 			Object strict = session.getAttribute(EXIUtils.STRICT);
 			exiProcessor = new EXIProcessor((String)session.getAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION), (Integer)blockSize, (Boolean)strict);		
 		} catch (EXIException e) {
+			e.printStackTrace();
 			return false;
 		}
 		session.setAttribute(EXI_PROCESSOR, exiProcessor);
@@ -450,12 +457,19 @@ public class EXIFilter extends IoFilterAdapter {
     	MessageDigest md = MessageDigest.getInstance("MD5");
     	File file = new File(fileLocation);
     	if(md5Hash == null || bytes == null){
-    		md5Hash = EXIUtils.bytesToHex(md.digest(Files.readAllBytes(file.toPath())));
+    		md5Hash = EXIUtils.bytesToHex(md.digest(FileUtils.readFileToByteArray(file)));
     	}
 		String ns = EXIUtils.getAttributeValue(EXIUtils.readFile(fileLocation), "targetNamespace");
 		
 		// obtener el schemas File del servidor y transformarlo a un elemento XML
 		Element serverSchemas;
+		
+		if(!new File(EXIUtils.schemasFileLocation).exists()){	// no hay ningún schema	(sólo el nuevo)
+        	EXIUtils.writeFile(EXIUtils.schemasFileLocation, "<setupResponse>\n"
+        			+ "<schema ns='" + ns + "' bytes='" + ((bytes == null) ? file.length() : bytes) + "' md5Hash='" + md5Hash + "' schemaLocation='" + fileLocation + "'/>"
+        			+ "</setupResponse>");
+        }
+		
         BufferedReader br = new BufferedReader(new FileReader(EXIUtils.schemasFileLocation));
         StringBuilder sb = new StringBuilder();
         String line = br.readLine();
@@ -472,19 +486,13 @@ public class EXIFilter extends IoFilterAdapter {
         @SuppressWarnings("unchecked")
 		Iterator<Element> j = serverSchemas.elementIterator("schema");
         int i = 0;	// índice donde debe ir el nuevo schema (en la lista de schemas)
-        if(j.hasNext()){
-        	while(j.hasNext()){
-        		auxSchema = j.next();
-				if(ns.compareToIgnoreCase(auxSchema.attributeValue("ns")) < 0){
-					// se debe quedar en esta posición
-					break;
-				}
-				i++;	// debe aumentar su posición solo si es mayor al último namespace comparado
-            }
-        }
-        else{	// no hay ningún schema	(sólo el nuevo)
-        	generateSchemasFile(EXIUtils.schemasFolder);
-        	return ns;
+    	while(j.hasNext()){
+    		auxSchema = j.next();
+			if(ns.compareToIgnoreCase(auxSchema.attributeValue("ns")) < 0){
+				// se debe quedar en esta posición
+				break;
+			}
+			i++;	// debe aumentar su posición solo si es mayor al último namespace comparado
         }
         
         int i2 = 0; // índice donde debe ir el nuevo schema (en el archivo)
@@ -507,8 +515,8 @@ public class EXIFilter extends IoFilterAdapter {
 		
 		return ns;
 	}
-    
-    void addNewSchemaToCanonicalSchema(String fileLocation, String ns, IoSession session) throws IOException{
+
+	void addNewSchemaToCanonicalSchema(String fileLocation, String ns, IoSession session) throws IOException{
 		// obtener el schemas File del servidor y transformarlo a un elemento XML
 		String canonicalSchemaStr = EXIUtils.readFile(EXIUtils.exiSchemasFolder + session.getAttribute("configId") + ".xsd");
 		StringBuilder canonicalSchemaStrBuilder = new StringBuilder();
