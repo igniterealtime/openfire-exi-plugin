@@ -22,61 +22,96 @@ import com.siemens.ct.exi.exceptions.EXIException;
 public class UploadSchemaFilter extends IoFilterAdapter {
 	
 	EXIFilter exiFilter;
-	final String endTag = "</uploadSchema>";
+	final String uploadSchemaStartTag = "<uploadSchema";
+	final String uploadSchemaEndTag = "</uploadSchema>";
+	final String setupStartTag = "<setup";
+	final String setupEndTag = "</setup>";
+	final String compressStartTag = "<compress";
+	final String compressEndTag = "</compress>";
 	
 	public UploadSchemaFilter(EXIFilter exiFilter){
 		this.exiFilter = exiFilter;
 	}
 
 	@Override
-	public void messageReceived(NextFilter nextFilter, IoSession session, Object message) throws Exception {
+    public void messageReceived(NextFilter nextFilter, IoSession session, Object message) throws Exception {
 		// Decode the bytebuffer and print it to the stdout
-        if (message instanceof ByteBuffer) {
-            ByteBuffer byteBuffer = (ByteBuffer) message;
-            // Keep current position in the buffer
-            int currentPos = byteBuffer.position();
-            // Decode buffer
-            Charset encoder = Charset.forName("UTF-8");
-            CharBuffer charBuffer = encoder.decode(byteBuffer.buf());
-            String startTag = charBuffer.toString();
-            if(startTag.contains(endTag)){
-            	startTag = startTag.substring(0, startTag.indexOf('>') + 1);
-            	String contentType = EXIUtils.getAttributeValue(startTag, "contentType");
-            	String md5Hash = EXIUtils.getAttributeValue(startTag, "md5Hash");
-            	String bytes = EXIUtils.getAttributeValue(startTag, "bytes");
-            	if(contentType != null && !"text".equals(contentType) && md5Hash != null && bytes != null){
-            		byte[] ba = new byte[byteBuffer.array().length - startTag.getBytes().length - endTag.getBytes().length];
-            		System.arraycopy(byteBuffer.array(), startTag.getBytes().length, ba, 0, ba.length);
-            		uploadCompressedMissingSchema(ba, contentType, md5Hash, bytes, session);
-            	}
-            	else{
-            		uploadMissingSchema((String) message, session);
-            	}
-            	byte ultimo = byteBuffer.array()[byteBuffer.array().length - 1];
-            	if(ultimo == ((byte) '<')){
-            		byte[] ba = new byte[1];
-            		ba[0] = ultimo;
-            		super.messageReceived(nextFilter, session, ByteBuffer.wrap(ba));
-            	}
-            	// Reset to old position in the buffer
-                byteBuffer.position(currentPos);
-            	throw new Exception("Upload processed!!");
-            }
-            else if(startTag.contains("</setup>")){
-            	exiFilter.messageReceived(nextFilter, session, startTag);
-            	return;
-            }
-            else if(startTag.contains("</compress>")){
-            	session.getFilterChain().remove("uploadSchemaFilter");
-            	exiFilter.messageReceived(nextFilter, session, startTag);
-            	return;
-            }
-            // Reset to old position in the buffer
-            byteBuffer.position(currentPos);
-        }
-        // Pass the message to the next filter
-		super.messageReceived(nextFilter, session, message);
-	}
+	    if (message instanceof ByteBuffer) {
+	        ByteBuffer byteBuffer = (ByteBuffer) message;
+	        // Keep current position in the buffer
+	        int currentPos = byteBuffer.position();
+	        // Decode buffer
+	        Charset encoder = Charset.forName("UTF-8");
+	        CharBuffer charBuffer = encoder.decode(byteBuffer.buf());
+	        
+	        String cont = (String) session.getAttribute("cont");
+	        if(cont == null)	cont = "";
+	        session.setAttribute("cont", "");
+	        String msg = cont + charBuffer.toString();
+	        do{
+		        if(msg.startsWith(uploadSchemaStartTag)){
+		        	if(!msg.contains(uploadSchemaEndTag)){
+		        		session.setAttribute("cont", msg);
+		        		return;
+		        	}
+		        	// msg is the first element, cont is the next element to be processed.
+		        	cont = msg.substring(msg.indexOf(uploadSchemaEndTag) + uploadSchemaEndTag.length());
+		        	session.setAttribute("cont", cont);
+		        	msg = msg.substring(0, msg.indexOf(uploadSchemaEndTag) + uploadSchemaEndTag.length());
+		        	
+		            String startTagStr = msg.substring(0, msg.indexOf('>') + 1);
+		            String contentType = EXIUtils.getAttributeValue(startTagStr, "contentType");
+		            String md5Hash = EXIUtils.getAttributeValue(startTagStr, "md5Hash");
+		            String bytes = EXIUtils.getAttributeValue(startTagStr, "bytes");
+		            
+		            if(contentType != null && !"text".equals(contentType) && md5Hash != null && bytes != null){
+		            	//TODO: caso en que llegan dos archivos en un mensaje
+	                    byte[] ba = new byte[byteBuffer.array().length - startTagStr.getBytes().length - uploadSchemaEndTag.getBytes().length];
+	                    System.arraycopy(byteBuffer.array(), startTagStr.getBytes().length, ba, 0, ba.length);
+System.out.println("uploadCompressedMissingSchema: " + EXIUtils.bytesToHex(ba));
+	                    uploadCompressedMissingSchema(ba, contentType, md5Hash, bytes, session);
+		            }
+		            else{
+		            	uploadMissingSchema(msg, session);
+		            }
+		        }
+		        else if(msg.startsWith("<setup")){
+		        	if(!msg.contains(setupEndTag)){
+		        		session.setAttribute("cont", msg);
+		        		return;
+		        	}
+		        	cont = msg.substring(msg.indexOf(setupEndTag) + setupEndTag.length());
+		        	session.setAttribute("cont", cont);
+		        	msg = msg.substring(0, msg.indexOf(setupEndTag) + setupEndTag.length());
+		        	
+	                exiFilter.messageReceived(nextFilter, session, msg);
+	                return;
+		        }
+		        else if(msg.startsWith("<compress")){
+		        	if(!msg.contains(compressEndTag)){
+		        		session.setAttribute("cont", msg);
+		        		return;
+		        	}
+		        	cont = msg.substring(msg.indexOf(compressEndTag) + compressEndTag.length());
+		        	session.setAttribute("cont", cont);
+		        	msg = msg.substring(0, msg.indexOf(compressEndTag) + compressEndTag.length());
+		        	
+	                session.getFilterChain().remove("uploadSchemaFilter");
+	                exiFilter.messageReceived(nextFilter, session, msg);
+	                return;
+		        }
+		        else{
+		        	break;
+		        }
+		        msg = cont;
+	        }while(!cont.equals(""));
+	        
+	        // Reset to old position in the buffer
+	        byteBuffer.position(currentPos);
+	    }
+    	// Pass the message to the next filter
+    	super.messageReceived(nextFilter, session, message);
+    }
 	
 	void uploadCompressedMissingSchema(byte[] content, String contentType, String md5Hash, String bytes, IoSession session) 
     		throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException{

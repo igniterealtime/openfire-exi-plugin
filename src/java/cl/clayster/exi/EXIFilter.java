@@ -3,6 +3,7 @@ package cl.clayster.exi;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -11,8 +12,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -25,6 +24,7 @@ import java.util.UUID;
 
 import javax.xml.transform.TransformerException;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.mina.common.ByteBuffer;
 import org.apache.mina.common.IoFilterAdapter;
 import org.apache.mina.common.IoSession;
@@ -264,6 +264,12 @@ public class EXIFilter extends IoFilterAdapter {
 	 */
 	private void generateSchemasFile(String folderLocation) throws NoSuchAlgorithmException, IOException {
 		File folder = new File(folderLocation);
+		if(!folder.exists()){
+			folder.mkdir();
+		}
+		if(!new File(EXIUtils.exiSchemasFolder).exists()){
+			new File(EXIUtils.exiSchemasFolder).mkdir();
+		}
         File[] listOfFiles = folder.listFiles();
         File file;
         String fileLocation;
@@ -290,7 +296,7 @@ public class EXIFilter extends IoFilterAdapter {
 					StringBuilder sb = new StringBuilder();
 	            	
 					if(fileLocation == null)	break;
-					is = Files.newInputStream(Paths.get(fileLocation));
+					is = new FileInputStream(fileLocation);
 					dis = new DigestInputStream(is, md);
 					
 					// leer el archivo y guardarlo en sb
@@ -369,6 +375,7 @@ public class EXIFilter extends IoFilterAdapter {
 			Object strict = session.getAttribute(EXIUtils.STRICT);
 			exiProcessor = new EXIProcessor((String)session.getAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION), (Integer)blockSize, (Boolean)strict);		
 		} catch (EXIException e) {
+			e.printStackTrace();
 			return false;
 		}
 		session.setAttribute(EXI_PROCESSOR, exiProcessor);
@@ -450,7 +457,7 @@ public class EXIFilter extends IoFilterAdapter {
     	MessageDigest md = MessageDigest.getInstance("MD5");
     	File file = new File(fileLocation);
     	if(md5Hash == null || bytes == null){
-    		md5Hash = EXIUtils.bytesToHex(md.digest(Files.readAllBytes(file.toPath())));
+    		md5Hash = EXIUtils.bytesToHex(md.digest(FileUtils.readFileToByteArray(file)));
     	}
 		String ns = EXIUtils.getAttributeValue(EXIUtils.readFile(fileLocation), "targetNamespace");
 		

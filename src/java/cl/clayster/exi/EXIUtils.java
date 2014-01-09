@@ -11,8 +11,8 @@ import java.net.MalformedURLException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.nio.file.Files;
 
+import org.apache.commons.io.FileUtils;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 
@@ -51,7 +51,7 @@ public class EXIUtils {
 	
 	public static String readFile(String fileLocation){
 		try{
-			return new String(Files.readAllBytes(new File(fileLocation).toPath()));
+			return FileUtils.readFileToString(new File(fileLocation));
 		}catch (IOException e) {
 			return null;
 		}
