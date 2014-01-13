@@ -17,16 +17,20 @@ import javax.xml.transform.stream.StreamResult;
 import org.apache.mina.common.ByteBuffer;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
+import org.xml.sax.SAXNotRecognizedException;
+import org.xml.sax.SAXNotSupportedException;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.XMLReaderFactory;
 
 import com.siemens.ct.exi.CodingMode;
+import com.siemens.ct.exi.Constants;
 import com.siemens.ct.exi.EXIFactory;
 import com.siemens.ct.exi.EncodingOptions;
 import com.siemens.ct.exi.FidelityOptions;
 import com.siemens.ct.exi.GrammarFactory;
 import com.siemens.ct.exi.api.sax.EXIResult;
 import com.siemens.ct.exi.api.sax.EXISource;
+import com.siemens.ct.exi.api.sax.SAXDecoder;
 import com.siemens.ct.exi.exceptions.EXIException;
 import com.siemens.ct.exi.grammars.Grammars;
 import com.siemens.ct.exi.helpers.DefaultEXIFactory;
@@ -66,6 +70,60 @@ public class EXIProcessor {
 System.err.println(message);
 			throw new EXIException(message);
 		}
+	}
+	
+	/**
+	 * Encodes an XML String into an EXI Body byte array using no schema files and default {@link EncodingOptions} and {@link FidelityOptions}.
+	 * 
+	 * @param xml the String to be encoded
+	 * @return a byte array containing the EXI Body
+	 * @throws IOException
+	 * @throws EXIException
+	 * @throws SAXException
+	 */
+	public static byte[] encodeEXIBody(String xml) throws EXIException, IOException, SAXException{
+		byte[] exi = encodeSchemaless(xml, false);
+		// With default options, the header is only 1 byte long: Distinguishing bits (10), Presence of EXI Options (0) and EXI Version (00000)
+		System.arraycopy(exi, 1, exi, 0, exi.length - 1);
+		return exi;
+	}
+	
+	/**
+	 * Decodes an EXI body byte array using no schema files.
+	 * 
+	 * @param exi the EXI stanza to be decoded
+	 * @return a String containing the decoded XML
+	 * @throws IOException
+	 * @throws EXIException
+	 * @throws UnsupportedEncodingException 
+	 * @throws SAXException
+	 */
+	public static String decodeExiBodySchemaless(byte[] exi) throws TransformerException, EXIException, UnsupportedEncodingException{
+		TransformerFactory tf = TransformerFactory.newInstance();
+		Transformer transformer = tf.newTransformer();
+		
+		EXIFactory factory = DefaultEXIFactory.newInstance();
+		defaultFidelityOptions.setFidelity(FidelityOptions.FEATURE_PREFIX, true);
+		factory.setFidelityOptions(defaultFidelityOptions);
+		factory.setCodingMode(defaultCodingMode);
+		factory.setFragment(defaultIsFragmet);
+		factory.setBlockSize(defaultBlockSize);
+		
+		SAXSource exiSource = new SAXSource(new InputSource(new ByteArrayInputStream(exi)));
+		SAXDecoder saxDecoder = (SAXDecoder) factory.createEXIReader();
+		try {
+			saxDecoder.setFeature(Constants.W3C_EXI_FEATURE_BODY_ONLY, Boolean.TRUE);
+		} catch (SAXNotRecognizedException e) {
+			e.printStackTrace();
+		} catch (SAXNotSupportedException e) {
+			e.printStackTrace();
+		}
+		exiSource.setXMLReader(saxDecoder);
+
+		ByteArrayOutputStream xmlDecoded = new ByteArrayOutputStream();
+		transformer.transform(exiSource, new StreamResult(xmlDecoded));
+
+		return xmlDecoded.toString("UTF-8");
 	}
 	
 	/**

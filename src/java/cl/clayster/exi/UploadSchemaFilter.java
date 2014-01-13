@@ -52,7 +52,6 @@ public class UploadSchemaFilter extends IoFilterAdapter {
 	        if(baCont == null)	baCont = new byte[] {};
 	        bba = EXIUtils.concat(baCont, bba);
 	        
-System.out.println("\nNUEVO MENSAJE:" + msg);
 	        do{
 		        if(msg.startsWith(uploadSchemaStartTag)){
 		        	if(!msg.contains(uploadSchemaEndTag)){
@@ -63,7 +62,6 @@ System.out.println("\nNUEVO MENSAJE:" + msg);
 		        	// msg will be the first <uploadSchema> element, cont will be the next element to be processed.
 		        	cont = msg.substring(msg.indexOf(uploadSchemaEndTag) + uploadSchemaEndTag.length());
 		        	session.setAttribute("cont", cont);
-if(!cont.equals(""))	System.out.println("cont GUARDADO: " + cont);
 		        	msg = msg.substring(0, msg.indexOf(uploadSchemaEndTag) + uploadSchemaEndTag.length());
 		        	
 		            String startTagStr = msg.substring(0, msg.indexOf('>') + 1);
@@ -79,13 +77,10 @@ if(!cont.equals(""))	System.out.println("cont GUARDADO: " + cont);
 				        	System.arraycopy(bba, srcPos, baCont, 0, bba.length - srcPos);
 				        	System.arraycopy(bba, 0, bba, 0, srcPos);
 				        	session.setAttribute("baCont", baCont);
-if(baCont.length != 0)	System.out.println("baCont GUARDADO: " + EXIUtils.bytesToHex(baCont));
 			        	}    
 			        	
 		            	byte[] ba = new byte[EXIUtils.indexOf(bba, uploadSchemaEndTag.getBytes()) - startTagStr.getBytes().length];
-		            	System.arraycopy(bba, startTagStr.getBytes().length, ba, 0, ba.length);        	
-System.out.println("uploadCompressedMissingSchema"
-		            	+ "\n\tMD5Hash: " + md5Hash + "\n\tbytes: " + bytes + "(" + ba.length + "): " + EXIUtils.bytesToHex(ba));
+		            	System.arraycopy(bba, startTagStr.getBytes().length, ba, 0, ba.length);
 	                    uploadCompressedMissingSchema(ba, contentType, md5Hash, bytes, session);
 		            }
 		            else{
@@ -108,7 +103,6 @@ System.out.println("uploadCompressedMissingSchema"
 		        else{
 		        	session.setAttribute("baCont", bba);
 	        		session.setAttribute("cont", msg);
-System.out.println("MENSAJE GUARDADO: " + msg);
 	        		return;
 		        }
 		        msg = cont;
@@ -125,13 +119,14 @@ System.out.println("MENSAJE GUARDADO: " + msg);
     	String filePath = EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
 		
     	if(!"text".equals(contentType) && md5Hash != null && bytes != null){
+    		String xml = "";
 			if(contentType.equals("ExiDocument")){
-    			String xml = EXIProcessor.decodeSchemaless(content);
-    			EXIUtils.writeFile(filePath, xml);
+    			xml = EXIProcessor.decodeSchemaless(content);
     		}
     		else if(contentType.equals("ExiBody")){
-    			// TODO
+    			xml = EXIProcessor.decodeExiBodySchemaless(content);
     		}	
+			EXIUtils.writeFile(filePath, xml);
     	}
     	
 		String ns = exiFilter.addNewSchemaToSchemasFile(filePath, md5Hash, bytes);
