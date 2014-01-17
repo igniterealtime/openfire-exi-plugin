@@ -60,8 +60,8 @@ public class EXICodecFilter extends IoFilterAdapter {
 				// Decode EXI bytes
 				try{
 					//TODO: reemplazar substring(38) de una forma bonita (elimina <?xml version=1.0.......)
-						xml = ((EXIProcessor) session.getAttribute(EXIFilter.EXI_PROCESSOR)).decodeBytes(exiBytes).substring(38);
-System.out.println("EXIDECODED (" + xml.length() + "): " + xml);
+					xml = ((EXIProcessor) session.getAttribute(EXIFilter.EXI_PROCESSOR)).decodeByteArray(exiBytes).substring(38);
+System.out.println("EXIDECODED (" + exiBytes.length + "->" + xml.length() + "): " + xml);
 				} catch (Exception e){					
 					session.setAttribute("exiBytes", exiBytes);
 					super.messageReceived(nextFilter, session, ByteBuffer.wrap("".getBytes()));
