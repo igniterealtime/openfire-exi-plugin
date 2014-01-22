@@ -164,8 +164,9 @@ public class EXIFilter extends IoFilterAdapter {
 		if(configId != null){
 			String agreement;
 			if(new File(EXIUtils.exiSchemasFolder + configId + ".xsd").exists()){
+				EXISetupConfiguration exiConfig = parseQuickConfigId(configId);
+				session.setAttribute(EXIUtils.EXI_CONFIG, exiConfig);
 				session.setAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION, EXIUtils.exiSchemasFolder + configId + ".xsd");
-				
 				agreement = "true";
 			}
 			else{
@@ -217,7 +218,8 @@ public class EXIFilter extends IoFilterAdapter {
 	        		if(agreement)	agreement = false;
 	        	}
 	        }
-	        EXISetupConfiguration exiConfig = new EXISetupConfiguration();
+	        
+        	EXISetupConfiguration exiConfig = new EXISetupConfiguration();
 	        // guardar el valor de blockSize y strict en session
 	        String aux = setup.attributeValue(EXIUtils.ALIGNMENT);
 	        if(aux != null || "".equals(aux)){
@@ -244,7 +246,7 @@ public class EXIFilter extends IoFilterAdapter {
 				exiConfig.setValuePartitionCapacity(Integer.parseInt(aux));
 			}
 	        /**
-	         * crear el configId:
+	         * configId:
 	         *  The first 36 (indexes 0-35) are just the UUID, number 37 is '_' (index 36)
 				The next digit (index 37) represents the alignment (0=bit-packed, 1=byte-packed, 2=pre-compression, 3=compression)
 				The next digit (index 38) represents if it is strict or not
@@ -256,17 +258,18 @@ public class EXIFilter extends IoFilterAdapter {
 	        		+ exiConfig.getBlockSize() + '_' + exiConfig.getValueMaxLength() + '_' + exiConfig.getValuePartitionCapacity();
 	        exiConfig.setId(configId);
 	        session.setAttribute(EXIUtils.EXI_CONFIG, exiConfig);
+	        session.setAttribute(EXIUtils.CONFIG_ID, configId);	// still necessary for uploading schemas with UploadSchemaFilter
 	        
-	        setup.addAttribute("agreement", String.valueOf(agreement));
+	        // generate canonical schema
 	        serverSchemas = createCanonicalSchema(serverSchemas, session);
-	        setup.setName("setupResponse");
-	        setup.addAttribute("configurationId", configId);
-	        setupResponse = setup.asXML();
-	        
 	        if(!agreement){
 	        	session.getFilterChain().addBefore("xmpp", "uploadSchemaFilter", new UploadSchemaFilter(this));
 	        }
+	        setup.addAttribute("agreement", String.valueOf(agreement));
+	        setup.setName("setupResponse");
+	        setup.addAttribute("configurationId", configId);
 	        
+	        setupResponse = setup.asXML();
 		} catch (FileNotFoundException e1) {
 			return null;
 		} catch (IOException e) {
@@ -277,40 +280,49 @@ public class EXIFilter extends IoFilterAdapter {
 		return setupResponse;
     }
 	
+	/**
+	 * Gets an EXI configuration id and parses it to return an <code>EXISetupConfiguration</code> class
+	 * @param configId a unique configuration id for a previously used EXI configuration
+	 * @return the respective EXI Configuration class, or null if there was any problem
+	 */
 	EXISetupConfiguration parseQuickConfigId(String configId){
 		EXISetupConfiguration exiConfig = null;
 		if(configId != null){
 			exiConfig = new EXISetupConfiguration();
 			exiConfig.setId(configId);
-			// next comments tell what is done by EXIFilter when it processes a successful setup stanza
-			// the first 36 chars (indexes 0-35) are just the UUID, number 37 is '_' (index 36)
-			Integer alignment = Character.getNumericValue(configId.charAt(37)); //The next digit (index 37) represents the alignment (0=bit-packed, 1=byte-packed, 2=pre-compression, 3=compression)
-			if(alignment < 0 || alignment > 3)	alignment = EXIProcessor.defaultAlignmentCode;
-			Boolean strict = configId.charAt(38) == '1';	//The next digit (index 38) represents if it is strict or not
-			configId = configId.substring(39);
-			Integer blockSize = Integer.valueOf(configId.substring(0, configId.indexOf('_')));	// next number represents blocksize (until the next '_')
-			configId = configId.substring(configId.indexOf('_') + 1);
-			Integer valueMaxLength = Integer.valueOf(configId.substring(0, configId.indexOf('_')));	// next number between dashes is valueMaxLength
-			Integer valuePartitionCapacity = Integer.valueOf(configId.substring(configId.indexOf('_') + 1)); // last number is valuePartitionCapacity
+			try{
+				// next comments tell what is done by EXIFilter when it processes a successful setup stanza
+				// the first 36 chars (indexes 0-35) are just the UUID, number 37 is '_' (index 36)
+				Integer alignment = Character.getNumericValue(configId.charAt(37)); //The next digit (index 37) represents the alignment (0=bit-packed, 1=byte-packed, 2=pre-compression, 3=compression)
+				if(alignment < 0 || alignment > 3)	alignment = EXIProcessor.defaultAlignmentCode;
+				Boolean strict = configId.charAt(38) == '1';	//The next digit (index 38) represents if it is strict or not
+				configId = configId.substring(39);
+				Integer blockSize = Integer.valueOf(configId.substring(0, configId.indexOf('_')));	// next number represents blocksize (until the next '_')
+				configId = configId.substring(configId.indexOf('_') + 1);
+				Integer valueMaxLength = Integer.valueOf(configId.substring(0, configId.indexOf('_')));	// next number between dashes is valueMaxLength
+				Integer valuePartitionCapacity = Integer.valueOf(configId.substring(configId.indexOf('_') + 1)); // last number is valuePartitionCapacity
 			
-			switch((int) alignment){
-				case 1:
-					exiConfig.setAlignment(CodingMode.BYTE_PACKED);
-					break;
-				case 2:
-					exiConfig.setAlignment(CodingMode.PRE_COMPRESSION);
-					break;
-				case 3:
-					exiConfig.setAlignment(CodingMode.COMPRESSION);
-					break;
-				default:
-					exiConfig.setAlignment(CodingMode.BIT_PACKED);
-					break;
-			};
-			exiConfig.setStrict(strict);
-			exiConfig.setBlockSize(blockSize);
-			exiConfig.setValueMaxLength(valueMaxLength);
-			exiConfig.setValuePartitionCapacity(valuePartitionCapacity);
+				switch((int) alignment){
+					case 1:
+						exiConfig.setAlignment(CodingMode.BYTE_PACKED);
+						break;
+					case 2:
+						exiConfig.setAlignment(CodingMode.PRE_COMPRESSION);
+						break;
+					case 3:
+						exiConfig.setAlignment(CodingMode.COMPRESSION);
+						break;
+					default:
+						exiConfig.setAlignment(CodingMode.BIT_PACKED);
+						break;
+				};
+				exiConfig.setStrict(strict);
+				exiConfig.setBlockSize(blockSize);
+				exiConfig.setValueMaxLength(valueMaxLength);
+				exiConfig.setValuePartitionCapacity(valuePartitionCapacity);
+			} catch(Exception e){
+				return null;
+			}
 		}
 		return exiConfig;
 	}
@@ -406,7 +418,7 @@ public class EXIFilter extends IoFilterAdapter {
 	 * @throws IOException
 	 */
 	private Element createCanonicalSchema(Element setup, IoSession session) throws IOException {
-		File newCanonicalSchema = new File(EXIUtils.exiSchemasFolder + session.getAttribute("configId") + ".xsd");
+		File newCanonicalSchema = new File(EXIUtils.exiSchemasFolder + ((EXISetupConfiguration)session.getAttribute(EXIUtils.EXI_CONFIG)).getId() + ".xsd");
         BufferedWriter newCanonicalSchemaWriter = new BufferedWriter(new FileWriter(newCanonicalSchema));
         newCanonicalSchemaWriter.write("<?xml version='1.0' encoding='UTF-8'?> \n\n<xs:schema \n\txmlns:xs='http://www.w3.org/2001/XMLSchema' \n\ttargetNamespace='urn:xmpp:exi:cs' \n\txmlns='urn:xmpp:exi:cs' \n\telementFormDefault='qualified'>\n");
         
@@ -582,7 +594,7 @@ public class EXIFilter extends IoFilterAdapter {
 
 	void addNewSchemaToCanonicalSchema(String fileLocation, String ns, IoSession session) throws IOException{
 		// obtener el schemas File del servidor y transformarlo a un elemento XML
-		String canonicalSchemaStr = EXIUtils.readFile(EXIUtils.exiSchemasFolder + session.getAttribute("configId") + ".xsd");
+		String canonicalSchemaStr = EXIUtils.readFile(EXIUtils.exiSchemasFolder + session.getAttribute(EXIUtils.CONFIG_ID) + ".xsd");
 		StringBuilder canonicalSchemaStrBuilder = new StringBuilder();
 		if(canonicalSchemaStr != null && canonicalSchemaStr.indexOf("namespace") != -1){
 	        	canonicalSchemaStrBuilder = new StringBuilder(canonicalSchemaStr);
@@ -602,7 +614,7 @@ public class EXIFilter extends IoFilterAdapter {
         	canonicalSchemaStrBuilder.append("\n</xs:schema>");
 		}
         
-        File canonicalSchema = new File(EXIUtils.exiSchemasFolder + session.getAttribute("configId") + ".xsd");
+        File canonicalSchema = new File(EXIUtils.exiSchemasFolder + session.getAttribute(EXIUtils.CONFIG_ID) + ".xsd");
         BufferedWriter canonicalSchemaWriter = new BufferedWriter(new FileWriter(canonicalSchema));
         canonicalSchemaWriter.write(canonicalSchemaStrBuilder.toString());
         canonicalSchemaWriter.close();

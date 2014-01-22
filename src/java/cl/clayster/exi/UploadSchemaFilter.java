@@ -19,6 +19,12 @@ import org.xml.sax.SAXException;
 
 import com.siemens.ct.exi.exceptions.EXIException;
 
+/**
+ * This class is used to process <uploadSchema> stanzas, which carry a schema that will be used for the compression that is being negotiated.
+ * 
+ * @author Javier Placencio
+ *
+ */
 public class UploadSchemaFilter extends IoFilterAdapter {
 	
 	EXIFilter exiFilter;

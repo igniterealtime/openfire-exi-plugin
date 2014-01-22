@@ -34,6 +34,7 @@ public class EXIUtils {
 	final protected static String VALUE_MAX_LENGTH = "valueMaxLength";
 	final protected static String VALUE_PARTITION_CAPACITY = "valuePartitionCapacity";
 	final protected static String EXI_CONFIG = "exiConfig";
+	final protected static String CONFIG_ID = "configId";
 	
 	final protected static char[] hexArray = "0123456789abcdef".toCharArray();
 	
