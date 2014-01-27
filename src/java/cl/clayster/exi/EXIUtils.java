@@ -16,6 +16,8 @@ import org.apache.commons.io.FileUtils;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 
+import com.siemens.ct.exi.CodingMode;
+
 /**
  * Contains useful methods to execute EXI functions needed by {@link EXIFilter} such as reading a file, getting an attribute from an XML document, among others.
  * 
@@ -95,6 +97,54 @@ public class EXIUtils {
 		return text;
 	}
 	
+	/**
+	 * Gets an EXI configuration id and parses it to return an <code>EXISetupConfiguration</code> class
+	 * @param configId a unique configuration id for a previously used EXI configuration
+	 * @return the respective EXI Configuration class, or null if there was any problem
+	 */
+	static EXISetupConfiguration parseQuickConfigId(String configId){
+		EXISetupConfiguration exiConfig = null;
+		if(configId != null){
+			exiConfig = new EXISetupConfiguration();
+			exiConfig.setId(configId);
+			try{
+				// next comments tell what is done by EXIFilter when it processes a successful setup stanza
+				// the first 36 chars (indexes 0-35) are just the UUID, number 37 is '_' (index 36)
+				Integer alignment = Character.getNumericValue(configId.charAt(37)); //The next digit (index 37) represents the alignment (0=bit-packed, 1=byte-packed, 2=pre-compression, 3=compression)
+				if(alignment < 0 || alignment > 3)	alignment = EXIProcessor.defaultAlignmentCode;
+				Boolean strict = configId.charAt(38) == '1';	//The next digit (index 38) represents if it is strict or not
+				configId = configId.substring(39);
+				Integer blockSize = Integer.valueOf(configId.substring(0, configId.indexOf('_')));	// next number represents blocksize (until the next '_')
+				configId = configId.substring(configId.indexOf('_') + 1);
+				Integer valueMaxLength = Integer.valueOf(configId.substring(0, configId.indexOf('_')));	// next number between dashes is valueMaxLength
+				Integer valuePartitionCapacity = Integer.valueOf(configId.substring(configId.indexOf('_') + 1)); // last number is valuePartitionCapacity
+			
+				switch((int) alignment){
+					case 1:
+						exiConfig.setAlignment(CodingMode.BYTE_PACKED);
+						break;
+					case 2:
+						exiConfig.setAlignment(CodingMode.PRE_COMPRESSION);
+						break;
+					case 3:
+						exiConfig.setAlignment(CodingMode.COMPRESSION);
+						break;
+					default:
+						exiConfig.setAlignment(CodingMode.BIT_PACKED);
+						break;
+				};
+				exiConfig.setStrict(strict);
+				exiConfig.setBlockSize(blockSize);
+				exiConfig.setValueMaxLength(valueMaxLength);
+				exiConfig.setValuePartitionCapacity(valuePartitionCapacity);
+			} catch(Exception e){
+				return null;
+			}
+		}
+		return exiConfig;
+	}
+	
+	/***************** server only methods ****************/
 	public static String downloadXml(String url){
 		StringBuilder sb = new StringBuilder();
 		String responseContent = "<error message=''/>";
@@ -183,4 +233,7 @@ public class EXIUtils {
 		System.arraycopy(b, 0, c, a.length, b.length);
 		return c;
 	}
+	
+	
+	
 }

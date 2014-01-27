@@ -15,6 +15,7 @@ import javax.xml.transform.sax.SAXSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.apache.mina.common.ByteBuffer;
+import org.apache.xerces.xni.parser.XMLEntityResolver;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.SAXNotRecognizedException;
@@ -69,7 +70,7 @@ public class EXIProcessor {
 		if(xsdLocation != null && new File(xsdLocation).isFile()){
 			try{
 				GrammarFactory grammarFactory = GrammarFactory.newInstance();
-				Grammars g = grammarFactory.createGrammars(xsdLocation, new SchemaResolver(EXIUtils.schemasFolder));
+				Grammars g = grammarFactory.createGrammars(xsdLocation, (XMLEntityResolver) new SchemaResolver(EXIUtils.schemasFolder));
 				exiFactory.setGrammars(g);
 			} catch (IOException e){
 				e.printStackTrace();
