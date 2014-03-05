@@ -11,7 +11,7 @@
     <version>0.1</version>
     <date>08/06/2013</date>
     <!--url>http://www.igniterealtime.org/projects/openfire/plugins.jsp</url-->
-    <minServerVersion>3.8.0</minServerVersion>
+    <minServerVersion>3.7.0</minServerVersion>
     <licenseType>gpl</licenseType>
 
 </plugin>

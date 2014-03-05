@@ -51,7 +51,7 @@ public class EXIFilter extends IoFilterAdapter {
 	public static final String filterName = "exiFilter";
 	private boolean enabled = true;
 	
-	public static HashMap<JID, IoSession> sessions = new HashMap<JID, IoSession>();
+	public static HashMap<JID, IoSession> sessions = new HashMap<JID, IoSession>(); //TODO: remove sessions field ¿not needed?
 
     public EXIFilter() {
         enabled = JiveGlobals.getBooleanProperty("plugin.exi", true);
@@ -164,10 +164,10 @@ public class EXIFilter extends IoFilterAdapter {
 		configId = setup.attributeValue("configurationId"); 
 		if(configId != null){
 			String agreement;
-			if(new File(EXIUtils.exiSchemasFolder + configId + ".xsd").exists()){
+			if(new File(JiveGlobals.getHomeDirectory() + EXIUtils.exiSchemasFolder + configId + ".xsd").exists()){
 				EXISetupConfiguration exiConfig = EXIUtils.parseQuickConfigId(configId);
 				session.setAttribute(EXIUtils.EXI_CONFIG, exiConfig);
-				session.setAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION, EXIUtils.exiSchemasFolder + configId + ".xsd");
+				session.setAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION, JiveGlobals.getHomeDirectory() + EXIUtils.exiSchemasFolder + configId + ".xsd");
 				agreement = "true";
 			}
 			else{
@@ -176,9 +176,9 @@ public class EXIFilter extends IoFilterAdapter {
 			return "<setupResponse xmlns='http://jabber.org/protocol/compress/exi' agreement='" + agreement + "' configurationId='" + configId + "'/>";
 		}
 		
-		if(!new File(EXIUtils.schemasFileLocation).exists()){
+		if(!new File(JiveGlobals.getHomeDirectory() + EXIUtils.schemasFileLocation).exists()){
 			try {
-				generateSchemasFile(EXIUtils.schemasFolder);
+				generateSchemasFile(JiveGlobals.getHomeDirectory() + EXIUtils.schemasFolder);
 			} catch (NoSuchAlgorithmException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
@@ -189,7 +189,7 @@ public class EXIFilter extends IoFilterAdapter {
 		try {
 			// obtener el schemas File del servidor y transformarlo a un elemento XML
 			Element serverSchemas;
-	        String schemasFileContent = EXIUtils.readFile(EXIUtils.schemasFileLocation);
+	        String schemasFileContent = EXIUtils.readFile(JiveGlobals.getHomeDirectory() + EXIUtils.schemasFileLocation);
 	        if(schemasFileContent == null){
 	        	return null;
 	        }
@@ -272,10 +272,13 @@ public class EXIFilter extends IoFilterAdapter {
 	        
 	        setupResponse = setup.asXML();
 		} catch (FileNotFoundException e1) {
+			e1.printStackTrace();
 			return null;
 		} catch (IOException e) {
+			e.printStackTrace();
 			return null;
 		} catch (DocumentException e) {
+			e.printStackTrace();
 			return null;
 		}
 		return setupResponse;
@@ -298,8 +301,8 @@ public class EXIFilter extends IoFilterAdapter {
 		if(!folder.exists()){
 			folder.mkdir();
 		}
-		if(!new File(EXIUtils.exiSchemasFolder).exists()){
-			new File(EXIUtils.exiSchemasFolder).mkdir();
+		if(!new File(JiveGlobals.getHomeDirectory() + EXIUtils.exiSchemasFolder).exists()){
+			new File(JiveGlobals.getHomeDirectory() + EXIUtils.exiSchemasFolder).mkdir();
 		}
         File[] listOfFiles = folder.listFiles();
         File file;
@@ -354,7 +357,7 @@ public class EXIFilter extends IoFilterAdapter {
 			}
             //variables to write the schemas files
             BufferedWriter stanzasWriter = null;
-            File stanzasFile = new File(EXIUtils.schemasFileLocation);
+            File stanzasFile = new File(JiveGlobals.getHomeDirectory() + EXIUtils.schemasFileLocation);
             stanzasWriter = new BufferedWriter(new FileWriter(stanzasFile));
             
             stanzasWriter.write("<setupResponse>");
@@ -374,7 +377,7 @@ public class EXIFilter extends IoFilterAdapter {
 	 * @throws IOException
 	 */
 	private Element createCanonicalSchema(Element setup, IoSession session) throws IOException {
-		File newCanonicalSchema = new File(EXIUtils.exiSchemasFolder + ((EXISetupConfiguration)session.getAttribute(EXIUtils.EXI_CONFIG)).getId() + ".xsd");
+		File newCanonicalSchema = new File(JiveGlobals.getHomeDirectory() + EXIUtils.exiSchemasFolder + ((EXISetupConfiguration)session.getAttribute(EXIUtils.EXI_CONFIG)).getId() + ".xsd");
         BufferedWriter newCanonicalSchemaWriter = new BufferedWriter(new FileWriter(newCanonicalSchema));
         newCanonicalSchemaWriter.write("<?xml version='1.0' encoding='UTF-8'?> \n\n<xs:schema \n\txmlns:xs='http://www.w3.org/2001/XMLSchema' \n\ttargetNamespace='urn:xmpp:exi:cs' \n\txmlns='urn:xmpp:exi:cs' \n\telementFormDefault='qualified'>\n");
         
@@ -440,7 +443,7 @@ public class EXIFilter extends IoFilterAdapter {
      */
     void uploadMissingSchema(String content, IoSession session) 
     		throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException{
-    	String filePath = EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
+    	String filePath = JiveGlobals.getHomeDirectory() + EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
     	OutputStream out = new FileOutputStream(filePath);
     	
     	content = content.substring(content.indexOf('>') + 1, content.indexOf("</"));
@@ -456,7 +459,7 @@ public class EXIFilter extends IoFilterAdapter {
     
     void uploadCompressedMissingSchema(byte[] content, String contentType, String md5Hash, String bytes, IoSession session) 
     		throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException{
-    	String filePath = EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
+    	String filePath = JiveGlobals.getHomeDirectory() + EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
 		
     	if(!"text".equals(contentType) && md5Hash != null && bytes != null){
     		String xml = "";
@@ -496,13 +499,13 @@ public class EXIFilter extends IoFilterAdapter {
 		// obtener el schemas File del servidor y transformarlo a un elemento XML
 		Element serverSchemas;
 		
-		if(!new File(EXIUtils.schemasFileLocation).exists()){	// no hay ningún schema	(sólo el nuevo)
-        	EXIUtils.writeFile(EXIUtils.schemasFileLocation, "<setupResponse>\n"
+		if(!new File(JiveGlobals.getHomeDirectory() + EXIUtils.schemasFileLocation).exists()){	// no hay ningún schema	(sólo el nuevo)
+        	EXIUtils.writeFile(JiveGlobals.getHomeDirectory() + EXIUtils.schemasFileLocation, "<setupResponse>\n"
         			+ "<schema ns='" + ns + "' bytes='" + ((bytes == null) ? file.length() : bytes) + "' md5Hash='" + md5Hash + "' schemaLocation='" + fileLocation + "'/>"
         			+ "</setupResponse>");
         }
 		
-        BufferedReader br = new BufferedReader(new FileReader(EXIUtils.schemasFileLocation));
+        BufferedReader br = new BufferedReader(new FileReader(JiveGlobals.getHomeDirectory() + EXIUtils.schemasFileLocation));
         StringBuilder sb = new StringBuilder();
         String line = br.readLine();
 
@@ -541,7 +544,7 @@ public class EXIFilter extends IoFilterAdapter {
     	}
     	
         
-    	BufferedWriter schemaWriter = new BufferedWriter(new FileWriter(EXIUtils.schemasFileLocation));
+    	BufferedWriter schemaWriter = new BufferedWriter(new FileWriter(JiveGlobals.getHomeDirectory() + EXIUtils.schemasFileLocation));
 		schemaWriter.write(sb.toString());
 		schemaWriter.close();
 		
@@ -550,7 +553,7 @@ public class EXIFilter extends IoFilterAdapter {
 
 	void addNewSchemaToCanonicalSchema(String fileLocation, String ns, IoSession session) throws IOException{
 		// obtener el schemas File del servidor y transformarlo a un elemento XML
-		String canonicalSchemaStr = EXIUtils.readFile(EXIUtils.exiSchemasFolder + session.getAttribute(EXIUtils.CONFIG_ID) + ".xsd");
+		String canonicalSchemaStr = EXIUtils.readFile(JiveGlobals.getHomeDirectory() + EXIUtils.exiSchemasFolder + session.getAttribute(EXIUtils.CONFIG_ID) + ".xsd");
 		StringBuilder canonicalSchemaStrBuilder = new StringBuilder();
 		if(canonicalSchemaStr != null && canonicalSchemaStr.indexOf("namespace") != -1){
 	        	canonicalSchemaStrBuilder = new StringBuilder(canonicalSchemaStr);
@@ -570,7 +573,7 @@ public class EXIFilter extends IoFilterAdapter {
         	canonicalSchemaStrBuilder.append("\n</xs:schema>");
 		}
         
-        File canonicalSchema = new File(EXIUtils.exiSchemasFolder + session.getAttribute(EXIUtils.CONFIG_ID) + ".xsd");
+        File canonicalSchema = new File(JiveGlobals.getHomeDirectory() + EXIUtils.exiSchemasFolder + session.getAttribute(EXIUtils.CONFIG_ID) + ".xsd");
         BufferedWriter canonicalSchemaWriter = new BufferedWriter(new FileWriter(canonicalSchema));
         canonicalSchemaWriter.write(canonicalSchemaStrBuilder.toString());
         canonicalSchemaWriter.close();

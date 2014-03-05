@@ -26,9 +26,10 @@ import com.siemens.ct.exi.CodingMode;
  */
 public class EXIUtils {
 	
-	final protected static String exiSchemasFolder = "C:/Users/Javier/workspace/Personales/openfire/target/openfire/plugins/exi/res/exiSchemas/";
-	final protected static String schemasFolder = "C:/Users/Javier/workspace/Personales/openfire/target/openfire/plugins/exi/res/";
-	final protected static String schemasFileLocation = "C:/Users/Javier/workspace/Personales/openfire/target/openfire/plugins/exi/res/exiSchemas/schemas.xml";
+	// for the folders it is needed the base openfire location to be appended first with JiveGlobals.getHomeDirectory()
+	final protected static String exiSchemasFolder = "/plugins/exi/classes/exiSchemas/";
+	final protected static String schemasFolder = "/plugins/exi/classes/";
+	final protected static String schemasFileLocation = "/plugins/exi/classes/exiSchemas/schemas.xml";
 	final protected static String CANONICAL_SCHEMA_LOCATION = "canonicalSchemaLocation";
 	final protected static String ALIGNMENT = "alignment";
 	final protected static String BLOCK_SIZE = "blockSize";
@@ -83,6 +84,7 @@ public class EXIUtils {
 	}
 	
 	public static String getAttributeValue(String text, String attribute) {
+		attribute = " " + attribute;
 		if(text.indexOf(attribute) == -1){
 			return null;
 		}

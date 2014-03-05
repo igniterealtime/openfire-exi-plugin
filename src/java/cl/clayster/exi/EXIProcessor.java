@@ -16,6 +16,7 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.apache.mina.common.ByteBuffer;
 import org.apache.xerces.xni.parser.XMLEntityResolver;
+import org.jivesoftware.util.JiveGlobals;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.SAXNotRecognizedException;
@@ -70,7 +71,7 @@ public class EXIProcessor {
 		if(xsdLocation != null && new File(xsdLocation).isFile()){
 			try{
 				GrammarFactory grammarFactory = GrammarFactory.newInstance();
-				Grammars g = grammarFactory.createGrammars(xsdLocation, (XMLEntityResolver) new SchemaResolver(EXIUtils.schemasFolder));
+				Grammars g = grammarFactory.createGrammars(xsdLocation, (XMLEntityResolver)new SchemaResolver(JiveGlobals.getHomeDirectory() + EXIUtils.schemasFolder));
 				exiFactory.setGrammars(g);
 			} catch (IOException e){
 				e.printStackTrace();
@@ -103,7 +104,7 @@ System.err.println(message);
 		if(xsdLocation != null && new File(xsdLocation).isFile()){
 			try{
 				GrammarFactory grammarFactory = GrammarFactory.newInstance();
-				Grammars g = grammarFactory.createGrammars(xsdLocation, new SchemaResolver(EXIUtils.schemasFolder));
+				Grammars g = grammarFactory.createGrammars(xsdLocation, (XMLEntityResolver)new SchemaResolver(JiveGlobals.getHomeDirectory() + EXIUtils.schemasFolder));
 				exiFactory.setGrammars(g);
 			} catch (IOException e){
 				e.printStackTrace();
@@ -287,7 +288,9 @@ System.err.println(message);
 		return aux == distinguishingBits;
 	}
 	
-	public static boolean hasEXICookie(byte[] ba){
+	public static boolean hasEXICookie(byte[] bba){
+		byte[] ba = new byte[4];
+        System.arraycopy(bba, 0, ba, 0, 4);
 		return "$EXI".equals(new String(ba));
 	}
 	

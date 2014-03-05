@@ -19,8 +19,6 @@ import com.siemens.ct.exi.exceptions.EXIException;
  */
 public class EXICodecFilter extends IoFilterAdapter {
 	
-	boolean streamStartFlag = false;
-	
 	public EXICodecFilter() {}
 	
 	@Override

@@ -23,22 +23,33 @@ public class EXIAlternativeBindingFilter extends IoFilterAdapter {
             ByteBuffer byteBuffer = (ByteBuffer) message;
             // Keep current position in the buffer
             int currentPos = byteBuffer.position();
-            byte[] ba = new byte[4];
-            System.arraycopy(byteBuffer.array(), 0, ba, 0, 4);
             
-            if(!EXIProcessor.hasEXICookie(ba)){
+            if(!EXIProcessor.hasEXICookie(byteBuffer.array())){
             	// Reset to old position in the buffer
                 byteBuffer.position(currentPos);
                 session.getFilterChain().remove(EXIAlternativeBindingFilter.filterName);
             }
             else{
             	String xml = EXIProcessor.decodeSchemaless(byteBuffer.array()).substring(38);
+            	String hostName = EXIUtils.getAttributeValue(xml, "to"); 
 System.out.println("EXIDECODED schemaless (" + session.hashCode() + "): " + xml);
                 if(xml.startsWith("<exi:setup ")){
                 	System.out.println("Se recibió <exi:setup>");
                 }
                 else if(xml.startsWith("<exi:streamStart ")){
-                	session.write(message);
+                	
+                	String streamStart = "<exi:streamStart xmlns:exi='http://jabber.org/protocol/compress/exi'"
+                			+ " version='1.0'"
+                			+ " from='"
+                			+ hostName
+                			+ "' xml:lang='en'"
+                			+ " xmlns:xml='http://www.w3.org/XML/1998/namespace' >"
+                			+ " <exi:xmlns prefix='stream' namespace='http://etherx.jabber.org/streams' />"
+                			+ " <exi:xmlns prefix='' namespace='jabber:client' />"
+                			+ " <exi:xmlns prefix='xml' namespace='http://www.w3.org/XML/1998/namespace' />"
+                			+ " </exi:streamStart>";
+                	byte[] response = EXIProcessor.encodeSchemaless(streamStart, true);
+                	session.write(ByteBuffer.wrap(response));
                 	throw new Exception("exi:streamStart");
                 }
                 message = xml;

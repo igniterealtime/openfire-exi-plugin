@@ -15,6 +15,7 @@ import org.apache.mina.common.IoFilterAdapter;
 import org.apache.mina.common.IoSession;
 import org.apache.xerces.impl.dv.util.Base64;
 import org.dom4j.DocumentException;
+import org.jivesoftware.util.JiveGlobals;
 import org.xml.sax.SAXException;
 
 import com.siemens.ct.exi.exceptions.EXIException;
@@ -107,6 +108,12 @@ public class UploadSchemaFilter extends IoFilterAdapter {
 	                exiFilter.messageReceived(nextFilter, session, msg);
                     //throw new Exception("Upload Compressed Missing Schema PROCESSED!");
 		        }
+		        else if(msg.startsWith("<iq") || msg.startsWith("<presence")){
+		        	session.setAttribute("baCont", null);
+		        	session.setAttribute("cont", null);
+		        	super.messageReceived(nextFilter, session, message);
+		        	return;
+		        }
 		        else{
 		        	session.setAttribute("baCont", bba);
 	        		session.setAttribute("cont", msg);
@@ -123,7 +130,7 @@ public class UploadSchemaFilter extends IoFilterAdapter {
 	
 	void uploadCompressedMissingSchema(byte[] content, String contentType, String md5Hash, String bytes, IoSession session) 
     		throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException{
-    	String filePath = EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
+    	String filePath = JiveGlobals.getHomeDirectory() + EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
 		
     	if(!"text".equals(contentType) && md5Hash != null && bytes != null){
     		String xml = "";
@@ -132,7 +139,7 @@ public class UploadSchemaFilter extends IoFilterAdapter {
     		}
     		else if(contentType.equals("ExiBody")){
     			xml = EXIProcessor.decodeExiBodySchemaless(content);
-    		}	
+    		}
 			EXIUtils.writeFile(filePath, xml);
     	}
     	
@@ -142,7 +149,7 @@ public class UploadSchemaFilter extends IoFilterAdapter {
 	
 	void uploadMissingSchema(String content, IoSession session) 
     		throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException{
-    	String filePath = EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
+    	String filePath = JiveGlobals.getHomeDirectory() + EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
     	OutputStream out = new FileOutputStream(filePath);
     	
     	content = content.substring(content.indexOf('>') + 1, content.indexOf("</"));
