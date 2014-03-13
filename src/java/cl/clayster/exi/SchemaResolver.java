@@ -45,14 +45,6 @@ public class SchemaResolver implements XMLEntityResolver {
 				this.names.put(namespace, file.getName());
         	}
 		}
-        
-        /*
-        for(Entry<String, String> entry : this.absolutePaths.entrySet()){
-        	System.out.println(entry.getKey() + "\n\t" + entry.getValue() 
-        			+ "\n\t" + this.canonicalPaths.get(entry.getKey()) 
-        			+ "\n\t" + this.names.get(entry.getKey()));   	
-        }
-        /**/
 	}
 	
 	@Override
@@ -60,26 +52,12 @@ public class SchemaResolver implements XMLEntityResolver {
 			throws XNIException, IOException {
 		
 		String namespace = resourceIdentifier.getNamespace();
-		String publicId = resourceIdentifier.getPublicId();
-
 		if(namespace != null){
 			if(this.canonicalPaths.containsKey(namespace)){				
 				String location = this.canonicalPaths.get(namespace);
 			return new XMLInputSource(resourceIdentifier.getPublicId(), location, resourceIdentifier.getBaseSystemId());
 			}
-		}
-		/*
-		else if("-//W3C//DTD XMLSCHEMA 200102//EN".equals(publicId)){
-			String location = "C:/Users/Javier/workspace/Personales/ExiClient/res/XMLSchema.dtd";
-System.out.println("->Resource returned: " + location);
-			return new XMLInputSource(publicId, location, resourceIdentifier.getBaseSystemId());
-		}
-		else if("datatypes".equals(publicId)){
-			String location = "C:/Users/Javier/workspace/Personales/ExiClient/res/datatypes.dtd";
-System.out.println("->Resource returned: " + location);
-			return new XMLInputSource(publicId, location, resourceIdentifier.getBaseSystemId());
-		}
-		/**/		
+		}	
 		return null;
 	}
 

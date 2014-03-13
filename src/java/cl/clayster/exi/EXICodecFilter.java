@@ -54,22 +54,24 @@ public class EXICodecFilter extends IoFilterAdapter {
 				System.arraycopy(byteBuffer.array(), 0, dest, exiBytes.length, byteBuffer.limit());
 				exiBytes = dest;				
 			}
-			if(EXIProcessor.isEXI(exiBytes[0])){
+			if(!EXIProcessor.isEXI(exiBytes[0])){
+				super.messageReceived(nextFilter, session, message);
+			}
+			else{
 				// Decode EXI bytes
 				try{
-					//TODO: reemplazar substring(38) de una forma bonita (elimina <?xml version=1.0.......)
-					xml = ((EXIProcessor) session.getAttribute(EXIFilter.EXI_PROCESSOR)).decodeByteArray(exiBytes).substring(38);
+					xml = ((EXIProcessor) session.getAttribute(EXIFilter.EXI_PROCESSOR)).decodeByteArray(exiBytes);
 System.out.println("EXIDECODED (" + exiBytes.length + "->" + xml.length() + "): " + xml);
 				} catch (Exception e){					
 					session.setAttribute("exiBytes", exiBytes);
 					super.messageReceived(nextFilter, session, ByteBuffer.wrap("".getBytes()));
 					return;
 				}
-				session.setAttribute("exiBytes", null);	// los bytes antiguos ya fueron usados con el utlimo mensaje
+				session.setAttribute("exiBytes", null);	// old bytes have been used with the last message
 				
 				if(xml.startsWith("<exi:streamStart ")){
 					String streamStart = " <exi:streamStart from='"
-							+ JiveGlobals.getProperty("xmpp.domain", "127.0.0.1").toLowerCase()
+							+ JiveGlobals.getProperty("xmpp.domain", "localhost").toLowerCase()
 							+ "' version='1.0' xml:lang='en' xmlns:exi='http://jabber.org/protocol/compress/exi'>"
 							+ "<exi:xmlns prefix='' namespace='jabber:client'/><exi:xmlns prefix='streams' namespace='http://etherx.jabber.org/streams'/>"
 							+ "<exi:xmlns prefix='exi' namespace='http://jabber.org/protocol/compress/exi'/></exi:streamStart>";
@@ -80,10 +82,8 @@ System.out.println("EXIDECODED (" + exiBytes.length + "->" + xml.length() + "): 
 					xml = "</stream:stream>";
 					session.write(exiBytes);
 				}
-	            super.messageReceived(nextFilter, session, ByteBuffer.wrap(xml.getBytes()));
-	            return;
+	            super.messageReceived(nextFilter, session, xml);
             }
-			super.messageReceived(nextFilter, session, message);
         }
 	}
 	

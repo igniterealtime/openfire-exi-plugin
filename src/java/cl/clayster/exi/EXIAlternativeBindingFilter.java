@@ -30,7 +30,7 @@ public class EXIAlternativeBindingFilter extends IoFilterAdapter {
                 session.getFilterChain().remove(EXIAlternativeBindingFilter.filterName);
             }
             else{
-            	String xml = EXIProcessor.decodeSchemaless(byteBuffer.array()).substring(38);
+            	String xml = EXIProcessor.decodeSchemaless(byteBuffer.array());
             	String hostName = EXIUtils.getAttributeValue(xml, "to"); 
 System.out.println("EXIDECODED schemaless (" + session.hashCode() + "): " + xml);
                 if(xml.startsWith("<exi:setup ")){

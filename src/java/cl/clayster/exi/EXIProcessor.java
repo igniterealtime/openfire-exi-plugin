@@ -170,7 +170,8 @@ System.err.println(message);
 		ByteArrayOutputStream xmlDecoded = new ByteArrayOutputStream();
 		transformer.transform(exiSource, new StreamResult(xmlDecoded));
 
-		return xmlDecoded.toString("UTF-8");
+		String xml = xmlDecoded.toString("UTF-8");
+		return xml.substring(xml.indexOf('>') + 1);
 	}
 	
 	/**
@@ -273,7 +274,8 @@ System.err.println(message);
 		ByteArrayOutputStream xmlDecoded = new ByteArrayOutputStream();
 		transformer.transform(exiSource, new StreamResult(xmlDecoded));
 
-		return xmlDecoded.toString("UTF-8");
+		String xml = xmlDecoded.toString("UTF-8");
+		return xml.substring(xml.indexOf('>') + 1);
 	}
 	
 	/**
@@ -328,6 +330,8 @@ System.err.println(message);
 	
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		transformer.transform(exiSource, new StreamResult(baos));		
-		return baos.toString("UTF-8");
+		
+		String xml = baos.toString("UTF-8");
+		return xml.substring(xml.indexOf('>') + 1);
 	}
 }
