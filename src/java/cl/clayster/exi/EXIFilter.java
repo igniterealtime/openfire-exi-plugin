@@ -34,10 +34,11 @@ import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 import org.jivesoftware.util.JiveGlobals;
 import org.xml.sax.SAXException;
-import org.xmpp.packet.JID;
 
 import com.siemens.ct.exi.CodingMode;
+import com.siemens.ct.exi.FidelityOptions;
 import com.siemens.ct.exi.exceptions.EXIException;
+import com.siemens.ct.exi.exceptions.UnsupportedOption;
 
 /**
  * This class is a filter that recognizes EXI sessions and adds an EXIEncoder and an EXIDecoder to those sessions. 
@@ -47,11 +48,8 @@ import com.siemens.ct.exi.exceptions.EXIException;
  */
 public class EXIFilter extends IoFilterAdapter {
 	
-	public static final String EXI_PROCESSOR = EXIProcessor.class.getName();
 	public static final String filterName = "exiFilter";
 	private boolean enabled = true;
-	
-	public static HashMap<JID, IoSession> sessions = new HashMap<JID, IoSession>(); //TODO: remove sessions field ¿not needed?
 
     public EXIFilter() {
         enabled = JiveGlobals.getBooleanProperty("plugin.exi", true);
@@ -88,25 +86,25 @@ public class EXIFilter extends IoFilterAdapter {
     @Override
     public void messageReceived(NextFilter nextFilter, IoSession session, Object message) throws Exception {
     	if(message instanceof String){
-    		Element msg = null;
+    		Element xml = null;
     		try{
-    			msg = DocumentHelper.parseText((String) message).getRootElement();
+    			xml = DocumentHelper.parseText((String) message).getRootElement();
     		} catch (DocumentException e){
     			super.messageReceived(nextFilter, session, message);
     			return;
     		}
-			if(msg.getName().equals("setup")){
-				String setupResponse = setupResponse(msg, session);
+			if(xml.getName().equals("setup")){
+				String setupResponse = setupResponse(xml, session);
 	    		if(setupResponse == null){
 	    			System.err.println("An error occurred while processing the negotiation.");
 	    		}else{
 	    			ByteBuffer bb = ByteBuffer.wrap(setupResponse.getBytes());
 	    	        session.write(bb);
 	    		}
-	    		throw new Exception("<setup> PROCESSED!!!!!");
+	    		return;
 			}
-			else if(msg.getName().equals(("downloadSchema"))){
-				String url = msg.attributeValue("null", "url");
+			else if(xml.getName().equals(("downloadSchema"))){
+				String url = xml.attributeValue("null", "url");
 				if(url != null){
 					String respuesta = "";
 					try{
@@ -127,11 +125,11 @@ public class EXIFilter extends IoFilterAdapter {
 	    						+ "' result='false'><error message='No free space left.'/></downloadSchemaResponse>";
 	    			}
 	    			session.write(ByteBuffer.wrap((respuesta).getBytes()));
-	    			throw new Exception("<downloadSchemaResponse> PROCESSED!!!!!");
+	    			return;
 				}
 			}
-			else if(msg.getName().equals("compress")
-					&& msg.elementText("method").equalsIgnoreCase("exi")){
+			else if(xml.getName().equals("compress") 
+					&& xml.elementText("method").equalsIgnoreCase("exi")){
 				if(createExiProcessor(session)){
 					String respuesta = "<compressed xmlns='http://jabber.org/protocol/compress'/>";
 	    			ByteBuffer bb = ByteBuffer.wrap(respuesta.getBytes());
@@ -142,7 +140,7 @@ public class EXIFilter extends IoFilterAdapter {
 	    			ByteBuffer bb = ByteBuffer.wrap("<failure xmlns=\'http://jabber.org/protocol/compress\'><setup-failed/></failure>".getBytes());
 	    	        session.write(bb);
 	    		}
-				throw new Exception("<compress> PROCESSED!!!!!");
+				return;
 			}
     	}
     	super.messageReceived(nextFilter, session, message);
@@ -156,7 +154,7 @@ public class EXIFilter extends IoFilterAdapter {
  * @param session the IoSession that represents the connection to the client
  * @return
  */
-	private String setupResponse(Element setup, IoSession session){
+	String setupResponse(Element setup, IoSession session){
 		String setupResponse = null;
 		String configId = "";
 		
@@ -223,23 +221,28 @@ public class EXIFilter extends IoFilterAdapter {
         	EXISetupConfiguration exiConfig = new EXISetupConfiguration();
 	        // guardar el valor de blockSize y strict en session
 	        String aux = setup.attributeValue(EXIUtils.ALIGNMENT);
-	        if(aux != null || "".equals(aux)){
-				if(aux.equals("bit-packed"))	exiConfig.setAlignment(CodingMode.BIT_PACKED);
-				else if(aux.equals("byte-packed"))	exiConfig.setAlignment(CodingMode.BYTE_PACKED);
-				else if(aux.equals("pre-compression"))	exiConfig.setAlignment(CodingMode.PRE_COMPRESSION);
-				else if(aux.equals("compression"))	exiConfig.setAlignment(CodingMode.COMPRESSION);
-				else	exiConfig.setAlignment(EXIProcessor.defaultCodingMode);
+	        if(aux != null){
+	        	CodingMode cm = CodingMode.BIT_PACKED;
+				if(aux.equals("bit-packed"));	
+				else if(aux.equals("byte-packed"))	cm = CodingMode.BYTE_PACKED;
+				else if(aux.equals("pre-compression"))	cm = CodingMode.PRE_COMPRESSION;
+				else if(aux.equals("compression"))	cm = CodingMode.COMPRESSION;
+				exiConfig.setCodingMode(cm);
 			}
 	        aux = setup.attributeValue(EXIUtils.BLOCK_SIZE);
-			if(aux != null || "".equals(aux)){
+			if(aux != null){
 				exiConfig.setBlockSize(Integer.parseInt(aux));
 			}
 			aux = setup.attributeValue(EXIUtils.STRICT);
-			if(aux != null || "".equals(aux)){
-				exiConfig.setStrict(Boolean.valueOf(aux));
+			if(aux != null){
+				try {
+					exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_STRICT, Boolean.valueOf(aux));
+				} catch (UnsupportedOption e) {
+					e.printStackTrace();
+				}
 			}
 			aux = setup.attributeValue(EXIUtils.VALUE_MAX_LENGTH);
-			if(aux != null || "".equals(aux)){
+			if(aux != null){
 				exiConfig.setValueMaxLength(Integer.parseInt(aux));
 			}
 			aux = setup.attributeValue(EXIUtils.VALUE_PARTITION_CAPACITY);
@@ -255,14 +258,14 @@ public class EXIFilter extends IoFilterAdapter {
 				Next number between dashes is valueMaxLength
 				Last number is valuePartitionCapacity
 	         */
-	        configId = UUID.randomUUID().toString() + '_' + exiConfig.getAlignmentCode() + (exiConfig.isStrict() ? "1":"0") 
+	        configId = UUID.randomUUID().toString() + '_' + exiConfig.getAlignmentCode() + (exiConfig.getFidelityOptions().isStrict() ? "1":"0") 
 	        		+ exiConfig.getBlockSize() + '_' + exiConfig.getValueMaxLength() + '_' + exiConfig.getValuePartitionCapacity();
-	        exiConfig.setId(configId);
+	        exiConfig.setSchemaId(configId);
 	        session.setAttribute(EXIUtils.EXI_CONFIG, exiConfig);
 	        session.setAttribute(EXIUtils.CONFIG_ID, configId);	// still necessary for uploading schemas with UploadSchemaFilter
 	        
 	        // generate canonical schema
-	        serverSchemas = createCanonicalSchema(serverSchemas, session);
+	        createCanonicalSchema(setup, session);
 	        if(!agreement){
 	        	session.getFilterChain().addBefore("xmpp", "uploadSchemaFilter", new UploadSchemaFilter(this));
 	        }
@@ -377,15 +380,14 @@ public class EXIFilter extends IoFilterAdapter {
 	 * @throws IOException
 	 */
 	private Element createCanonicalSchema(Element setup, IoSession session) throws IOException {
-		File newCanonicalSchema = new File(JiveGlobals.getHomeDirectory() + EXIUtils.exiSchemasFolder + ((EXISetupConfiguration)session.getAttribute(EXIUtils.EXI_CONFIG)).getId() + ".xsd");
+		File newCanonicalSchema = new File(JiveGlobals.getHomeDirectory() + EXIUtils.exiSchemasFolder + ((EXISetupConfiguration)session.getAttribute(EXIUtils.EXI_CONFIG)).getSchemaId() + ".xsd");
         BufferedWriter newCanonicalSchemaWriter = new BufferedWriter(new FileWriter(newCanonicalSchema));
         newCanonicalSchemaWriter.write("<?xml version='1.0' encoding='UTF-8'?> \n\n<xs:schema \n\txmlns:xs='http://www.w3.org/2001/XMLSchema' \n\ttargetNamespace='urn:xmpp:exi:cs' \n\txmlns='urn:xmpp:exi:cs' \n\telementFormDefault='qualified'>\n");
         
 		Element schema;
         for (@SuppressWarnings("unchecked") Iterator<Element> i = setup.elementIterator("schema"); i.hasNext(); ) {
         	schema = i.next();
-        	newCanonicalSchemaWriter.write("\n\t<xs:import namespace='" + schema.attributeValue("ns") + "' schemaLocation='" + schema.attributeValue("schemaLocation") + "'/>");
-        	schema.remove(schema.attribute("schemaLocation"));
+        	newCanonicalSchemaWriter.write("\n\t<xs:import namespace='" + schema.attributeValue("ns") + "'/>");
         }
         newCanonicalSchemaWriter.write("\n</xs:schema>");
         newCanonicalSchemaWriter.close();
@@ -402,16 +404,16 @@ public class EXIFilter extends IoFilterAdapter {
      * @param session IoSession associated to the user's socket
      * @return 
      */
-    private boolean createExiProcessor(IoSession session){
+    boolean createExiProcessor(IoSession session){
         EXIProcessor exiProcessor;
 		try {
 			EXISetupConfiguration exiConfig = (EXISetupConfiguration) session.getAttribute(EXIUtils.EXI_CONFIG);
-			exiProcessor = new EXIProcessor((String)session.getAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION), exiConfig);
+			exiProcessor = new EXIProcessor((String)session.getAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION), exiConfig);			
 		} catch (EXIException e) {
 			e.printStackTrace();
 			return false;
 		}
-		session.setAttribute(EXI_PROCESSOR, exiProcessor);
+		session.setAttribute(EXIUtils.EXI_PROCESSOR, exiProcessor);
 		return true;
     }
     
@@ -419,7 +421,7 @@ public class EXIFilter extends IoFilterAdapter {
      * Adds an EXIEncoder as well as an EXIDecoder to the given IoSession
      * @param session the IoSession where the EXI encoder and decoder will be added to.
      */
-    private void addCodec(IoSession session){
+    void addCodec(IoSession session){
 		session.getFilterChain().addBefore("xmpp", "exiDecoder", new EXICodecFilter());
     	session.getFilterChain().remove(EXIFilter.filterName);	
         return;
@@ -557,7 +559,7 @@ public class EXIFilter extends IoFilterAdapter {
 		StringBuilder canonicalSchemaStrBuilder = new StringBuilder();
 		if(canonicalSchemaStr != null && canonicalSchemaStr.indexOf("namespace") != -1){
 	        	canonicalSchemaStrBuilder = new StringBuilder(canonicalSchemaStr);
-	        	String aux = canonicalSchemaStrBuilder.toString(), importedNamespace = ">";	// importedNamespace hace que se comience justo antes de los xs:import
+	        	String aux = canonicalSchemaStrBuilder.toString(), importedNamespace = ">";	// importedNamespace makes it possible to start right before 'xs:import' elements
 	        	int index;
 	        	do{
 	        		aux = aux.substring(aux.indexOf(importedNamespace) + importedNamespace.length());

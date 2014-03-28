@@ -24,7 +24,6 @@ import org.xml.sax.SAXNotSupportedException;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.XMLReaderFactory;
 
-import com.siemens.ct.exi.CodingMode;
 import com.siemens.ct.exi.Constants;
 import com.siemens.ct.exi.EXIFactory;
 import com.siemens.ct.exi.EncodingOptions;
@@ -43,31 +42,15 @@ public class EXIProcessor {
 	EXIResult exiResult;
 	SAXSource exiSource;
 	
-	static final int defaultAlignmentCode = 0;	// 0:bit-packed, 1:byte-packed, 2:pre-compression, 3:compression
-	static final CodingMode defaultCodingMode = CodingMode.BIT_PACKED;
-	static final FidelityOptions defaultFidelityOptions = FidelityOptions.createDefault();
-	static final boolean defaultIsFragmet = false;
-	static final int defaultBlockSize = 1000000;
-	static final boolean defaultStrict = false;
-	static final int defaultValueMaxLength = -1;
-	static final int defaultValuePartitionCapacity = -1;
-	
-	
 	/**
-	 * Constructs an EXI Processor using <b>xsdLocation</b> as the Canonical Schema and <b>default values</b> for its configuration.
-	 * @param xsdLocation
+	 * Constructs a default EXI Processor using the <b>default canonical schema</b> and <b>default values</b> for its configuration.
 	 * @throws EXIException
 	 */
-	public EXIProcessor(String xsdLocation) throws EXIException{
+	public EXIProcessor() throws EXIException{
 		// create default factory and EXI grammar for schema
-		exiFactory = DefaultEXIFactory.newInstance();
-		defaultFidelityOptions.setFidelity(FidelityOptions.FEATURE_PREFIX, true);
-		exiFactory.setFidelityOptions(defaultStrict ? FidelityOptions.createStrict() : defaultFidelityOptions);
-		exiFactory.setCodingMode(CodingMode.BIT_PACKED);
-		exiFactory.setBlockSize(defaultBlockSize);
-		exiFactory.setValueMaxLength(defaultValueMaxLength);
-		exiFactory.setValuePartitionCapacity(defaultValuePartitionCapacity);
+		exiFactory = new EXISetupConfiguration();
 		
+		String xsdLocation = JiveGlobals.getHomeDirectory() + EXIUtils.defaultCanonicalSchemaLocation;
 		if(xsdLocation != null && new File(xsdLocation).isFile()){
 			try{
 				GrammarFactory grammarFactory = GrammarFactory.newInstance();
@@ -84,22 +67,15 @@ System.err.println(message);
 			throw new EXIException(message);
 		}
 	}
-	
+		
 	/**
-	 * Constructs an EXI Processor using <b>xsdLocation</b> as the Canonical Schema and the respective parameters in exiConfig for its configuration.
-	 * @param xsdLocation	location of the Canonical schema file
-	 * @param exiConfig	EXISetupConfiguration instance with the necessary EXI options
+	 * Constructs an EXI Processor using <b>xsdLocation</b> as the Canonical Schema and <b>default values</b> for its configuration.
+	 * @param xsdLocation
 	 * @throws EXIException
 	 */
-	public EXIProcessor(String xsdLocation, EXISetupConfiguration exiConfig) throws EXIException{
-		if(exiConfig == null)	exiConfig = new EXISetupConfiguration();
-		// create factory and EXI grammar for given schema
-		exiFactory = DefaultEXIFactory.newInstance();
-		exiFactory.setCodingMode(exiConfig.getAlignment());
-		exiFactory.setBlockSize(exiConfig.getBlockSize());
-		exiFactory.setFidelityOptions(exiConfig.getFo());
-		exiFactory.setValueMaxLength(exiConfig.getValueMaxLength());
-		exiFactory.setValuePartitionCapacity(exiConfig.getValuePartitionCapacity());
+	public EXIProcessor(String xsdLocation) throws EXIException{
+		// create default factory and EXI grammar for schema
+		exiFactory = new EXISetupConfiguration();
 		
 		if(xsdLocation != null && new File(xsdLocation).isFile()){
 			try{
@@ -113,7 +89,33 @@ System.err.println(message);
 		}
 		else{
 			String message = "Invalid Canonical Schema file location: " + xsdLocation;
-System.err.println(message);
+			throw new EXIException(message);
+		}
+	}
+	
+	/**
+	 * Constructs an EXI Processor using <b>xsdLocation</b> as the Canonical Schema and the respective parameters in exiConfig for its configuration.
+	 * @param xsdLocation	location of the Canonical schema file
+	 * @param exiConfig	EXISetupConfiguration instance with the necessary EXI options
+	 * @throws EXIException
+	 */
+	public EXIProcessor(String xsdLocation, EXISetupConfiguration exiConfig) throws EXIException{
+		if(exiConfig == null)	exiConfig = new EXISetupConfiguration();
+		// create factory and EXI grammar for given schema
+		exiFactory = exiConfig;
+		
+		if(xsdLocation != null && new File(xsdLocation).isFile()){
+			try{
+				GrammarFactory grammarFactory = GrammarFactory.newInstance();
+				Grammars g = grammarFactory.createGrammars(xsdLocation, (XMLEntityResolver)new SchemaResolver(JiveGlobals.getHomeDirectory() + EXIUtils.schemasFolder));
+				exiFactory.setGrammars(g);
+			} catch (IOException e){
+				e.printStackTrace();
+				throw new EXIException("Error while creating Grammars.");
+			}
+		}
+		else{
+			String message = "Invalid Canonical Schema file location: " + xsdLocation;
 			throw new EXIException(message);
 		}
 	}
@@ -149,12 +151,8 @@ System.err.println(message);
 		TransformerFactory tf = TransformerFactory.newInstance();
 		Transformer transformer = tf.newTransformer();
 		
-		EXIFactory factory = DefaultEXIFactory.newInstance();
-		defaultFidelityOptions.setFidelity(FidelityOptions.FEATURE_PREFIX, true);
-		factory.setFidelityOptions(defaultFidelityOptions);
-		factory.setCodingMode(defaultCodingMode);
-		factory.setFragment(defaultIsFragmet);
-		factory.setBlockSize(defaultBlockSize);
+		EXIFactory factory = new EXISetupConfiguration();
+		factory.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_PREFIX, true);
 		
 		SAXSource exiSource = new SAXSource(new InputSource(new ByteArrayInputStream(exi)));
 		SAXDecoder saxDecoder = (SAXDecoder) factory.createEXIReader();
@@ -187,12 +185,8 @@ System.err.println(message);
 	public static byte[] encodeSchemaless(String xml, boolean cookie) throws IOException, EXIException, SAXException{
 		ByteArrayOutputStream osEXI = new ByteArrayOutputStream();
 		// start encoding process
-		EXIFactory factory = DefaultEXIFactory.newInstance();
-		defaultFidelityOptions.setFidelity(FidelityOptions.FEATURE_PREFIX, true);
-		factory.setFidelityOptions(defaultFidelityOptions);
-		factory.setCodingMode(defaultCodingMode);
-		factory.setFragment(defaultIsFragmet);
-		factory.setBlockSize(defaultBlockSize);
+		EXIFactory factory = new EXISetupConfiguration();
+		factory.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_PREFIX, true);
 		if(cookie)	factory.getEncodingOptions().setOption(EncodingOptions.INCLUDE_COOKIE);
 		
 		XMLReader xmlReader = XMLReaderFactory.createXMLReader();
@@ -221,18 +215,15 @@ System.err.println(message);
 	public static byte[] encodeSchemaless(String xml, EncodingOptions eo, FidelityOptions fo) throws IOException, EXIException, SAXException{
 		ByteArrayOutputStream osEXI = new ByteArrayOutputStream();
 		// start encoding process
-		EXIFactory factory = DefaultEXIFactory.newInstance();
+		EXIFactory factory = new EXISetupConfiguration();
 		// EXI configurations setup
 		if(eo != null){
 			factory.setEncodingOptions(eo);
 		}
 		if(fo != null){
-			defaultFidelityOptions.setFidelity(FidelityOptions.FEATURE_PREFIX, true);
-			factory.setFidelityOptions(defaultFidelityOptions);
+			factory.setFidelityOptions(fo);
+			factory.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_PREFIX, true);
 		}
-		factory.setCodingMode(defaultCodingMode);
-		factory.setFragment(defaultIsFragmet);
-		factory.setBlockSize(defaultBlockSize);
 		
 		XMLReader xmlReader = XMLReaderFactory.createXMLReader();
 		EXIResult exiResult = new EXIResult(factory);
@@ -261,11 +252,6 @@ System.err.println(message);
 		Transformer transformer = tf.newTransformer();
 		
 		EXIFactory factory = DefaultEXIFactory.newInstance();
-		defaultFidelityOptions.setFidelity(FidelityOptions.FEATURE_PREFIX, true);
-		factory.setFidelityOptions(defaultFidelityOptions);
-		factory.setCodingMode(defaultCodingMode);
-		factory.setFragment(defaultIsFragmet);
-		factory.setBlockSize(defaultBlockSize);
 		if(!isEXI(exi[0]))	factory.getEncodingOptions().setOption(EncodingOptions.INCLUDE_COOKIE);
 		
 		SAXSource exiSource = new SAXSource(new InputSource(new ByteArrayInputStream(exi)));
@@ -292,11 +278,11 @@ System.err.println(message);
 	
 	public static boolean hasEXICookie(byte[] bba){
 		byte[] ba = new byte[4];
-        System.arraycopy(bba, 0, ba, 0, 4);
+        System.arraycopy(bba, 0, ba, 0, bba.length >= 4 ? 4 : bba.length);
 		return "$EXI".equals(new String(ba));
 	}
 	
-	public ByteBuffer encodeByteBuffer(String xml) throws IOException, EXIException, SAXException, TransformerException{
+	public ByteBuffer encodeByteBuffer(String xml, boolean cookie) throws IOException, EXIException, SAXException, TransformerException{
 		// encoding
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		exiResult = new EXIResult(exiFactory);		
@@ -305,7 +291,20 @@ System.err.println(message);
 		XMLReader xmlReader = XMLReaderFactory.createXMLReader();
 		xmlReader.setContentHandler(exiResult.getHandler());
 		xmlReader.parse(new InputSource(new StringReader(xml)));
-		return ByteBuffer.wrap(baos.toByteArray());
+		
+		byte[] exi = baos.toByteArray();
+		if(cookie){
+			byte[] c = "$EXI".getBytes();
+			byte[] aux = new byte[exi.length + c.length]; 
+			System.arraycopy(exi, 0, aux, c.length, exi.length);
+			System.arraycopy(c, 0, aux, 0, c.length);
+			exi = aux;
+		}
+		return ByteBuffer.wrap(exi);
+	}
+	
+	public ByteBuffer encodeByteBuffer(String xml) throws IOException, EXIException, SAXException, TransformerException{
+		return encodeByteBuffer(xml, false);
 	}
 	
 	
