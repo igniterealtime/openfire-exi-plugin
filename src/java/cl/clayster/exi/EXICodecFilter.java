@@ -2,10 +2,11 @@ package cl.clayster.exi;
 
 import java.nio.charset.Charset;
 
+import javax.xml.transform.TransformerException;
+
 import org.apache.mina.common.ByteBuffer;
 import org.apache.mina.common.IoFilterAdapter;
 import org.apache.mina.common.IoSession;
-import org.jivesoftware.openfire.net.ClientStanzaHandler;
 import org.jivesoftware.util.JiveGlobals;
 
 import com.siemens.ct.exi.exceptions.EXIException;
@@ -28,7 +29,7 @@ public class EXICodecFilter extends IoFilterAdapter {
 			msg = Charset.forName("UTF-8").decode(((ByteBuffer) writeRequest.getMessage()).buf()).toString();
 			try{
 				ByteBuffer bb = ByteBuffer.allocate(msg.length());
-				bb = ((EXIProcessor) session.getAttribute(EXIFilter.EXI_PROCESSOR)).encodeByteBuffer(msg);
+				bb = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(msg);
 				super.filterWrite(nextFilter, session, new WriteRequest(bb, writeRequest.getFuture(), writeRequest.getDestination()));
 				return;
 			} catch (EXIException e){
@@ -60,9 +61,8 @@ public class EXICodecFilter extends IoFilterAdapter {
 			else{
 				// Decode EXI bytes
 				try{
-					xml = ((EXIProcessor) session.getAttribute(EXIFilter.EXI_PROCESSOR)).decodeByteArray(exiBytes);
-System.out.println("EXIDECODED (" + exiBytes.length + "->" + xml.length() + "): " + xml);
-				} catch (Exception e){					
+					xml = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).decodeByteArray(exiBytes);
+				} catch (TransformerException e){
 					session.setAttribute("exiBytes", exiBytes);
 					super.messageReceived(nextFilter, session, ByteBuffer.wrap("".getBytes()));
 					return;
@@ -89,7 +89,6 @@ System.out.println("EXIDECODED (" + exiBytes.length + "->" + xml.length() + "): 
 	
 	@Override
     public void sessionClosed(NextFilter nextFilter, IoSession session) throws Exception {
-    	EXIFilter.sessions.remove(((ClientStanzaHandler) session.getAttribute("HANDLER")).getAddress());
     	super.sessionClosed(nextFilter, session);
     }
 

@@ -17,6 +17,7 @@ import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 
 import com.siemens.ct.exi.CodingMode;
+import com.siemens.ct.exi.FidelityOptions;
 
 /**
  * Contains useful methods to execute EXI functions needed by {@link EXIFilter} such as reading a file, getting an attribute from an XML document, among others.
@@ -26,18 +27,20 @@ import com.siemens.ct.exi.CodingMode;
  */
 public class EXIUtils {
 	
-	// for the folders it is needed the base openfire location to be appended first with JiveGlobals.getHomeDirectory()
-	final protected static String exiSchemasFolder = "/plugins/exi/classes/exiSchemas/";
-	final protected static String schemasFolder = "/plugins/exi/classes/";
-	final protected static String schemasFileLocation = "/plugins/exi/classes/exiSchemas/schemas.xml";
-	final protected static String CANONICAL_SCHEMA_LOCATION = "canonicalSchemaLocation";
-	final protected static String ALIGNMENT = "alignment";
-	final protected static String BLOCK_SIZE = "blockSize";
-	final protected static String STRICT = "strict";
-	final protected static String VALUE_MAX_LENGTH = "valueMaxLength";
-	final protected static String VALUE_PARTITION_CAPACITY = "valuePartitionCapacity";
-	final protected static String EXI_CONFIG = "exiConfig";
-	final protected static String CONFIG_ID = "configId";
+	/** for the folders it is needed the base openfire location to be appended first with JiveGlobals.getHomeDirectory() **/
+	final static String schemasFolder = "/plugins/exi/classes/";
+	final static String exiSchemasFolder = "/plugins/exi/classes/canonicalSchemas/";
+	final static String defaultCanonicalSchemaLocation = "/plugins/exi/classes/canonicalSchemas/defaultSchema.xsd";
+	final static String schemasFileLocation = "/plugins/exi/classes/canonicalSchemas/schemas.xml";
+	final static String CANONICAL_SCHEMA_LOCATION = "canonicalSchemaLocation";
+	final static String ALIGNMENT = "alignment";
+	final static String BLOCK_SIZE = "blockSize";
+	final static String STRICT = "strict";
+	final static String VALUE_MAX_LENGTH = "valueMaxLength";
+	final static String VALUE_PARTITION_CAPACITY = "valuePartitionCapacity";
+	final static String EXI_CONFIG = "exiConfig";
+	final static String CONFIG_ID = "configId";
+	final static String EXI_PROCESSOR = EXIProcessor.class.getName();
 	
 	final protected static char[] hexArray = "0123456789abcdef".toCharArray();
 	
@@ -90,9 +93,9 @@ public class EXIUtils {
 		}
 		text = text.substring(text.indexOf(attribute) + attribute.length());	// desde despues de targetNamespace	
     	text = text.substring(0, text.indexOf('>'));	// cortar lo que viene despues del próximo '>'
-    	char comilla = '"';
+    	char comilla = '\'';
     	if(text.indexOf(comilla) == -1){
-    		comilla = '\'';
+    		comilla = '"';
     	}
     	text = text.substring(text.indexOf(comilla) + 1);	// cortar lo que hay hasta la primera comilla (inclusive)
     	text = text.substring(0, text.indexOf(comilla));		// cortar lo que hay despues de la nueva primera comilla/segunda comilla de antes (inclusive)
@@ -108,12 +111,12 @@ public class EXIUtils {
 		EXISetupConfiguration exiConfig = null;
 		if(configId != null){
 			exiConfig = new EXISetupConfiguration();
-			exiConfig.setId(configId);
+			exiConfig.setSchemaId(configId);
 			try{
 				// next comments tell what is done by EXIFilter when it processes a successful setup stanza
 				// the first 36 chars (indexes 0-35) are just the UUID, number 37 is '_' (index 36)
 				Integer alignment = Character.getNumericValue(configId.charAt(37)); //The next digit (index 37) represents the alignment (0=bit-packed, 1=byte-packed, 2=pre-compression, 3=compression)
-				if(alignment < 0 || alignment > 3)	alignment = EXIProcessor.defaultAlignmentCode;
+				if(alignment < 0 || alignment > 3)	alignment = 0;
 				Boolean strict = configId.charAt(38) == '1';	//The next digit (index 38) represents if it is strict or not
 				configId = configId.substring(39);
 				Integer blockSize = Integer.valueOf(configId.substring(0, configId.indexOf('_')));	// next number represents blocksize (until the next '_')
@@ -123,19 +126,19 @@ public class EXIUtils {
 			
 				switch((int) alignment){
 					case 1:
-						exiConfig.setAlignment(CodingMode.BYTE_PACKED);
+						exiConfig.setCodingMode(CodingMode.BYTE_PACKED);
 						break;
 					case 2:
-						exiConfig.setAlignment(CodingMode.PRE_COMPRESSION);
+						exiConfig.setCodingMode(CodingMode.PRE_COMPRESSION);
 						break;
 					case 3:
-						exiConfig.setAlignment(CodingMode.COMPRESSION);
+						exiConfig.setCodingMode(CodingMode.COMPRESSION);
 						break;
 					default:
-						exiConfig.setAlignment(CodingMode.BIT_PACKED);
+						exiConfig.setCodingMode(CodingMode.BIT_PACKED);
 						break;
 				};
-				exiConfig.setStrict(strict);
+				exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_STRICT, strict);
 				exiConfig.setBlockSize(blockSize);
 				exiConfig.setValueMaxLength(valueMaxLength);
 				exiConfig.setValuePartitionCapacity(valuePartitionCapacity);

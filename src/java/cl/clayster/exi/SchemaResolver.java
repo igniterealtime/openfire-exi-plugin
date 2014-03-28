@@ -11,9 +11,10 @@ import org.apache.xerces.xni.parser.XMLInputSource;
 
 public class SchemaResolver implements XMLEntityResolver {
 	
-	HashMap<String, String> absolutePaths = new HashMap<String, String>();
 	HashMap<String, String> canonicalPaths = new HashMap<String, String>();
 	HashMap<String, String> names = new HashMap<String, String>();
+	
+	
 
 	public SchemaResolver (String folderLocation) throws IOException{
 		File folder = new File(folderLocation);
@@ -24,10 +25,9 @@ public class SchemaResolver implements XMLEntityResolver {
 		String targetNamespaceStr = "targetNamespace=", namespace = null;
 		int t;
 		
-		// variables to write the stanzas in the right order (namepsace alfabethical order)
         for (int i = 0; i < listOfFiles.length; i++) {
         	file = listOfFiles[i];
-        	if (file.isFile() && file.getName().endsWith(".xsd") && !file.getName().endsWith("canonicalSchema.xsd")) { // se hace lo siguiente para cada archivo XSD en la carpeta folder	
+        	if (file.isFile() && file.getName().endsWith(".xsd") && !file.getName().endsWith("canonicalSchema.xsd")) {	
         		fileLocation = file.getAbsolutePath();
 				if(fileLocation == null)	break;
 				
@@ -40,11 +40,12 @@ public class SchemaResolver implements XMLEntityResolver {
 					//namespace = namespace.substring(0, namespace.indexOf(namespace.codePointAt(0), 1) + 1);	// CON comillas
 					namespace = namespace.substring(1, namespace.indexOf(namespace.codePointAt(0), 1));	// SIN comillas
 					}
-				this.absolutePaths.put(namespace, file.getAbsolutePath());
 				this.canonicalPaths.put(namespace, file.getCanonicalPath());
 				this.names.put(namespace, file.getName());
         	}
 		}
+        this.canonicalPaths.put("-//W3C//DTD XMLSCHEMA 200102//EN", new File(EXIUtils.schemasFolder + "XMLSchema.dtd").getAbsolutePath());
+        this.canonicalPaths.put("datatypes", new File(EXIUtils.schemasFolder + "datatypes.dtd").getAbsolutePath());
 	}
 	
 	@Override
