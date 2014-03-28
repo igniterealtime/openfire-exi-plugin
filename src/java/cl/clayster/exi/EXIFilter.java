@@ -130,7 +130,9 @@ public class EXIFilter extends IoFilterAdapter {
 			}
 			else if(xml.getName().equals("compress") 
 					&& xml.elementText("method").equalsIgnoreCase("exi")){
-				if(createExiProcessor(session)){
+				EXIProcessor exiProcessor = createExiProcessor(session);
+				if(exiProcessor != null){
+					session.setAttribute(EXIUtils.EXI_PROCESSOR, exiProcessor);
 					String respuesta = "<compressed xmlns='http://jabber.org/protocol/compress'/>";
 	    			ByteBuffer bb = ByteBuffer.wrap(respuesta.getBytes());
 	    	        session.write(bb);
@@ -404,17 +406,18 @@ public class EXIFilter extends IoFilterAdapter {
      * @param session IoSession associated to the user's socket
      * @return 
      */
-    boolean createExiProcessor(IoSession session){
-        EXIProcessor exiProcessor;
-		try {
-			EXISetupConfiguration exiConfig = (EXISetupConfiguration) session.getAttribute(EXIUtils.EXI_CONFIG);
-			exiProcessor = new EXIProcessor((String)session.getAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION), exiConfig);			
-		} catch (EXIException e) {
-			e.printStackTrace();
-			return false;
-		}
-		session.setAttribute(EXIUtils.EXI_PROCESSOR, exiProcessor);
-		return true;
+    EXIProcessor createExiProcessor(IoSession session){
+        EXIProcessor exiProcessor = null;
+        if(session.containsAttribute(EXIUtils.EXI_CONFIG)){
+			try {
+				EXISetupConfiguration exiConfig = (EXISetupConfiguration) session.getAttribute(EXIUtils.EXI_CONFIG);
+				exiProcessor = new EXIProcessor((String)session.getAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION), exiConfig);			
+			} catch (EXIException e) {
+				e.printStackTrace();
+				return null;
+			}
+        }
+		return exiProcessor;
     }
     
     /**

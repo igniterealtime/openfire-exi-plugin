@@ -1,6 +1,7 @@
 package cl.clayster.exi;
 
 import java.nio.charset.Charset;
+import java.util.Iterator;
 
 import javax.xml.transform.TransformerException;
 
@@ -19,8 +20,9 @@ import org.jivesoftware.util.JiveGlobals;
  */
 public class EXIAlternativeBindingFilter extends IoFilterAdapter {
 	
-	public static final String filterName = "altBindFilter";
-	private static final String flag = "altFlag";
+	public static final String filterName = "exiAltBindFilter";
+	private static final String flag = "exiAltFlag";
+	private static final String firstStreamStartFlag = "exiAltStreamStartFlag";
 	
 	public EXIAlternativeBindingFilter(){}
 	
@@ -29,18 +31,19 @@ public class EXIAlternativeBindingFilter extends IoFilterAdapter {
 		if(writeRequest.getMessage() instanceof ByteBuffer){
 			ByteBuffer bb = (ByteBuffer) writeRequest.getMessage();
 			String msg = Charset.forName("UTF-8").decode(((ByteBuffer) writeRequest.getMessage()).buf()).toString();
-System.out.println(msg);
 			if(msg.contains("<stream:stream ")){
+				String id = EXIUtils.getAttributeValue(msg, "id");
 				String hostName = JiveGlobals.getProperty("xmpp.domain", "127.0.0.1").toLowerCase();				
 				String streamStart = "<exi:streamStart xmlns:exi='http://jabber.org/protocol/compress/exi'"
 						+ " version='1.0'"
 						+ " from='"
 						+ hostName
 						+ "' xml:lang='en'"
-						+ " xmlns:xml='http://www.w3.org/XML/1998/namespace' >"
-						+ " <exi:xmlns prefix='stream' namespace='http://etherx.jabber.org/streams' />"
-						+ " <exi:xmlns prefix='' namespace='jabber:client' />"
-						+ " <exi:xmlns prefix='xml' namespace='http://www.w3.org/XML/1998/namespace' />"
+						+ " xmlns:xml='http://www.w3.org/XML/1998/namespace'"
+						+ " id=\"" + id + "\">"
+						+ " <exi:xmlns prefix='stream' namespace='http://etherx.jabber.org/streams'/>"
+						+ " <exi:xmlns prefix='' namespace='jabber:client'/>"
+						+ " <exi:xmlns prefix='xml' namespace='http://www.w3.org/XML/1998/namespace'/>"
 						+ " </exi:streamStart>";
 				if(session.containsAttribute(EXIUtils.EXI_CONFIG)){
 					((EXIFilter) session.getFilterChain().get(EXIFilter.filterName)).addCodec(session);
@@ -48,15 +51,30 @@ System.out.println(msg);
 					session.getFilterChain().remove(EXIAlternativeBindingFilter.filterName);
 				}
 				else{
-					bb = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(streamStart, true);
+System.out.println("ENCODING to send: " + streamStart);
+					bb = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(streamStart,
+							true);
+					//TODO:		!session.containsAttribute(EXIAlternativeBindingFilter.firstStreamStartFlag));
+					session.setAttribute(EXIAlternativeBindingFilter.firstStreamStartFlag, "true");
 					super.filterWrite(nextFilter, session, new WriteRequest(bb, writeRequest.getFuture(), writeRequest.getDestination()));
+					
+					if(msg.contains("<stream:features")){
+						msg = msg.substring(msg.indexOf("<stream:features"))
+								.replaceAll("<stream:features", "<stream:features xmlns:stream=\"http://etherx.jabber.org/streams\"");
+System.out.println("ENCODING to send: " + msg);
+						super.filterWrite(nextFilter, session, 
+								new WriteRequest(((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(msg)
+										, writeRequest.getFuture(), writeRequest.getDestination()));
+					}
 					return;
 				}
 			}
 			else if(msg.startsWith("<stream:features")){
 				msg = msg.replaceAll("<stream:features", "<stream:features xmlns:stream=\"http://etherx.jabber.org/streams\"");
 			}
+			/*
 			else if(msg.contains("<exi:setupResponse ")){
+				
 				// if there was agreement, put the new EXIProcessor in the session
 				String agreement = EXIUtils.getAttributeValue(msg, "agreement");
     	        if(agreement != null && agreement.equals("true")){
@@ -69,8 +87,8 @@ System.out.println("exiProcessor nue: " + session.getAttribute(EXIUtils.EXI_PROC
     	        	}
     	        }
 			}
-//System.out.println("using EXIProcessor: " + session.getAttribute(EXIUtils.EXI_PROCESSOR));
-System.out.println("encoding to send: " + msg);
+			*/
+System.out.println("ENCODING to send: " + msg);
 			bb = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(msg);
 			super.filterWrite(nextFilter, session, new WriteRequest(bb, writeRequest.getFuture(), writeRequest.getDestination()));
 		}
@@ -97,7 +115,11 @@ System.out.println("encoding to send: " + msg);
 			}
 			if(EXIProcessor.hasEXICookie(exiBytes)){
             	session.setAttribute(EXIAlternativeBindingFilter.flag, "true");
-	            session.setAttribute(EXIUtils.EXI_PROCESSOR, new EXIProcessor());
+            	EXIProcessor ep = ((EXIFilter)session.getFilterChain().get(EXIFilter.filterName)).createExiProcessor(session);
+            	if(ep == null){
+            		ep = new EXIProcessor();
+            	}
+            	session.setAttribute(EXIUtils.EXI_PROCESSOR, ep);
 System.err.println("new EXIProcessor: " + session.getAttribute(EXIUtils.EXI_PROCESSOR));
             }
 			if(session.containsAttribute(EXIAlternativeBindingFilter.flag)){
@@ -110,10 +132,10 @@ System.err.println("\tusing EXIProcessor: " + session.getAttribute(EXIUtils.EXI_
 					session.setAttribute("exiBytes", exiBytes);
 					return;
 				}
-				Element xml = DocumentHelper.parseText(msg).getRootElement();
+				session.setAttribute("exiBytes", null);	// old bytes have been used with the last message
 				
+				Element xml = DocumentHelper.parseText(msg).getRootElement();
 System.err.println("EXIDECODED: " + xml.asXML());
-
 				if(xml.getName().equals("streamStart")){
 					super.messageReceived(nextFilter, session, translateStreamStart(xml));
 					return;
@@ -128,15 +150,6 @@ System.err.println("EXIDECODED: " + xml.asXML());
 		    		else	System.err.println("An error occurred while processing alternative negotiation.");
                 	return;
                 }
-				/*
-				else if(xml.getName().equals("iq")){
-					Element query = xml.element("query");
-					if(query != null && "jabber:iq:auth".equals(query.getNamespace().getURI())){
-						super.messageReceived(nextFilter, session, xml.asXML());
-						return;
-					}
-				}
-				*/
                 message = xml.asXML();
             }
             else{
@@ -151,13 +164,20 @@ System.err.println("EXIDECODED: " + xml.asXML());
 	private String translateStreamStart(Element streamStart){
 		StringBuilder sb = new StringBuilder();
 		sb.append("<stream:stream to=\"").append(streamStart.attributeValue("to")).append('\"');
-		sb.append(" xmlns=\"jabber:client xmlns:stream=\"http://etherx.jabber.org/streams\"");
 		sb.append(" version=\"").append(streamStart.attributeValue("version")).append('\"');
-		sb.append(" xmlns:exi=\"http://jabber.org/protocol/compress/exi\"");
-		sb.append(" xmlns:xml=\"http://www.w3.org/XML/1998/namespace\"");		
+		//sb.append(" xmlns=\"jabber:client xmlns:stream=\"http://etherx.jabber.org/streams\"");
+		
+		Element aux;
+		for(@SuppressWarnings("unchecked") Iterator<Element> j = streamStart.elementIterator("xmlns"); j.hasNext();){
+			aux = j.next();
+			sb.append(" xmlns");
+			String prefix = aux.attributeValue("prefix");
+			if(prefix != null && !prefix.equals(""))	sb.append(":").append(prefix);
+			sb.append("=\"").append(aux.attributeValue("namespace")).append('\"');
+		}
 		sb.append(">");
-		//return sb.toString();
-		return "<stream:stream to=\"exi.clayster.cl\" xmlns=\"jabber:client\" xmlns:stream=\"http://etherx.jabber.org/streams\" version=\"1.0\">";
+		return sb.toString();
+		//return "<stream:stream to=\"exi.clayster.cl\" xmlns=\"jabber:client\" xmlns:stream=\"http://etherx.jabber.org/streams\" version=\"1.0\">";
 	}
 
 	

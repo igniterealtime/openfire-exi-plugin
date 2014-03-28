@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='UTF-8'?> 
 
 <xs:schema 
-	xmlns:xs='http://www.w3.org/2001/XMLSchema' 
-	targetNamespace='urn:xmpp:exi:cs' 
-	xmlns='urn:xmpp:exi:cs' 
+	xmlns:xs='http://www.w3.org/2001/XMLSchema'
+	xmlns:stream='http://etherx.jabber.org/streams'
+	targetNamespace='urn:xmpp:exi:cs'
 	elementFormDefault='qualified'>
 
 	<xs:import namespace='http://etherx.jabber.org/streams'/>
