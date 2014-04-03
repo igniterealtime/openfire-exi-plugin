@@ -1,5 +1,7 @@
 package cl.clayster.exi;
 
+import org.jivesoftware.util.JiveGlobals;
+
 import com.siemens.ct.exi.CodingMode;
 import com.siemens.ct.exi.FidelityOptions;
 import com.siemens.ct.exi.exceptions.UnsupportedOption;
@@ -14,7 +16,9 @@ public class EXISetupConfiguration extends DefaultEXIFactory{
 	
 	protected String schemaId = "urn:xmpp:exi:default"; 	
 	protected boolean quickSetup = false;
-	
+	private String canonicalSchemaLocation = JiveGlobals.getHomeDirectory() + EXIUtils.defaultCanonicalSchemaLocation;
+
+
 	/**
 	 * Constructs a new EXISetupConfigurations and initializates it with Default Values.
 	 * @param quickSetup indicates whether or not to try quick EXI configuration setup first
@@ -32,6 +36,8 @@ public class EXISetupConfiguration extends DefaultEXIFactory{
 	}
 	
 	protected void setDefaultValues() {
+		setSchemaIdResolver(new SchemaIdResolver());
+		
 		setDefaultValues(this);
 		setFidelityOptions(FidelityOptions.createStrict());
 		
@@ -82,4 +88,14 @@ public class EXISetupConfiguration extends DefaultEXIFactory{
         			(cm.equals(CodingMode.COMPRESSION)) ? "compression": "bit-packed";
 		return alignment;
 	}
+	
+	public String getCanonicalSchemaLocation() {
+		return canonicalSchemaLocation;
+	}
+
+	public void setCanonicalSchemaLocation(String canonicalSchemaLocation) {
+		this.canonicalSchemaLocation = canonicalSchemaLocation;
+	}
+	
+	
 }

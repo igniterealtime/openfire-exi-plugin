@@ -27,9 +27,11 @@ public class EXICodecFilter extends IoFilterAdapter {
 		String msg = "";
 		if(writeRequest.getMessage() instanceof ByteBuffer){
 			msg = Charset.forName("UTF-8").decode(((ByteBuffer) writeRequest.getMessage()).buf()).toString();
+System.out.println("ENCODING WITH CODECFILTER: " + msg);
 			try{
 				ByteBuffer bb = ByteBuffer.allocate(msg.length());
 				bb = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(msg);
+System.out.println("ENCODED WITH CODECFILTER: " + EXIUtils.bytesToHex(bb.array()));
 				super.filterWrite(nextFilter, session, new WriteRequest(bb, writeRequest.getFuture(), writeRequest.getDestination()));
 				return;
 			} catch (EXIException e){

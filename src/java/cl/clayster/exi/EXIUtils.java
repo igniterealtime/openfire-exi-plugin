@@ -15,6 +15,7 @@ import java.net.URLConnection;
 import org.apache.commons.io.FileUtils;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
+import org.jivesoftware.util.JiveGlobals;
 
 import com.siemens.ct.exi.CodingMode;
 import com.siemens.ct.exi.FidelityOptions;
@@ -39,7 +40,7 @@ public class EXIUtils {
 	final static String VALUE_MAX_LENGTH = "valueMaxLength";
 	final static String VALUE_PARTITION_CAPACITY = "valuePartitionCapacity";
 	final static String EXI_CONFIG = "exiConfig";
-	final static String CONFIG_ID = "configId";
+	final static String SCHEMA_ID = "schemaId";
 	final static String EXI_PROCESSOR = EXIProcessor.class.getName();
 	
 	final protected static char[] hexArray = "0123456789abcdef".toCharArray();
@@ -104,25 +105,26 @@ public class EXIUtils {
 	
 	/**
 	 * Gets an EXI configuration id and parses it to return an <code>EXISetupConfiguration</code> class
-	 * @param configId a unique configuration id for a previously used EXI configuration
+	 * @param schemaId a unique configuration id for a previously used EXI configuration
 	 * @return the respective EXI Configuration class, or null if there was any problem
 	 */
-	static EXISetupConfiguration parseQuickConfigId(String configId){
+	static EXISetupConfiguration parseQuickConfigId(String schemaId){
 		EXISetupConfiguration exiConfig = null;
-		if(configId != null){
+		if(schemaId != null){
 			exiConfig = new EXISetupConfiguration();
-			exiConfig.setSchemaId(configId);
+			exiConfig.setSchemaId(schemaId);
+			exiConfig.setCanonicalSchemaLocation(EXIUtils.getCanonicalSchemaFile(schemaId).getPath());
 			try{
 				// next comments tell what is done by EXIFilter when it processes a successful setup stanza
 				// the first 36 chars (indexes 0-35) are just the UUID, number 37 is '_' (index 36)
-				Integer alignment = Character.getNumericValue(configId.charAt(37)); //The next digit (index 37) represents the alignment (0=bit-packed, 1=byte-packed, 2=pre-compression, 3=compression)
+				Integer alignment = Character.getNumericValue(schemaId.charAt(37)); //The next digit (index 37) represents the alignment (0=bit-packed, 1=byte-packed, 2=pre-compression, 3=compression)
 				if(alignment < 0 || alignment > 3)	alignment = 0;
-				Boolean strict = configId.charAt(38) == '1';	//The next digit (index 38) represents if it is strict or not
-				configId = configId.substring(39);
-				Integer blockSize = Integer.valueOf(configId.substring(0, configId.indexOf('_')));	// next number represents blocksize (until the next '_')
-				configId = configId.substring(configId.indexOf('_') + 1);
-				Integer valueMaxLength = Integer.valueOf(configId.substring(0, configId.indexOf('_')));	// next number between dashes is valueMaxLength
-				Integer valuePartitionCapacity = Integer.valueOf(configId.substring(configId.indexOf('_') + 1)); // last number is valuePartitionCapacity
+				Boolean strict = schemaId.charAt(38) == '1';	//The next digit (index 38) represents if it is strict or not
+				schemaId = schemaId.substring(39);
+				Integer blockSize = Integer.valueOf(schemaId.substring(0, schemaId.indexOf('_')));	// next number represents blocksize (until the next '_')
+				schemaId = schemaId.substring(schemaId.indexOf('_') + 1);
+				Integer valueMaxLength = Integer.valueOf(schemaId.substring(0, schemaId.indexOf('_')));	// next number between dashes is valueMaxLength
+				Integer valuePartitionCapacity = Integer.valueOf(schemaId.substring(schemaId.indexOf('_') + 1)); // last number is valuePartitionCapacity
 			
 				switch((int) alignment){
 					case 1:
@@ -237,6 +239,10 @@ public class EXIUtils {
 		System.arraycopy(a, 0, c, 0, a.length);
 		System.arraycopy(b, 0, c, a.length, b.length);
 		return c;
+	}
+
+	static File getCanonicalSchemaFile(String schemaId) {
+		return new File(JiveGlobals.getHomeDirectory() + EXIUtils.exiSchemasFolder + schemaId + ".xsd");
 	}
 	
 	

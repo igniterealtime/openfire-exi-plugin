@@ -2,7 +2,6 @@ package cl.clayster.exi;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -15,7 +14,6 @@ import javax.xml.transform.sax.SAXSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.apache.mina.common.ByteBuffer;
-import org.apache.xerces.xni.parser.XMLEntityResolver;
 import org.jivesoftware.util.JiveGlobals;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -43,84 +41,32 @@ public class EXIProcessor {
 	SAXSource exiSource;
 	
 	/**
-	 * Constructs a default EXI Processor using the <b>default canonical schema</b> and <b>default values</b> for its configuration.
-	 * @throws EXIException
-	 */
-	public EXIProcessor() throws EXIException{
-		// create default factory and EXI grammar for schema
-		exiFactory = new EXISetupConfiguration();
-		
-		String xsdLocation = JiveGlobals.getHomeDirectory() + EXIUtils.defaultCanonicalSchemaLocation;
-		if(xsdLocation != null && new File(xsdLocation).isFile()){
-			try{
-				GrammarFactory grammarFactory = GrammarFactory.newInstance();
-				Grammars g = grammarFactory.createGrammars(xsdLocation, (XMLEntityResolver)new SchemaResolver(JiveGlobals.getHomeDirectory() + EXIUtils.schemasFolder));
-				exiFactory.setGrammars(g);
-			} catch (IOException e){
-				e.printStackTrace();
-				throw new EXIException("Error while creating Grammars.");
-			}
-		}
-		else{
-			String message = "Invalid Canonical Schema file location: " + xsdLocation;
-System.err.println(message);
-			throw new EXIException(message);
-		}
-	}
-		
-	/**
-	 * Constructs an EXI Processor using <b>xsdLocation</b> as the Canonical Schema and <b>default values</b> for its configuration.
-	 * @param xsdLocation
-	 * @throws EXIException
-	 */
-	public EXIProcessor(String xsdLocation) throws EXIException{
-		// create default factory and EXI grammar for schema
-		exiFactory = new EXISetupConfiguration();
-		
-		if(xsdLocation != null && new File(xsdLocation).isFile()){
-			try{
-				GrammarFactory grammarFactory = GrammarFactory.newInstance();
-				Grammars g = grammarFactory.createGrammars(xsdLocation, (XMLEntityResolver)new SchemaResolver(JiveGlobals.getHomeDirectory() + EXIUtils.schemasFolder));
-				exiFactory.setGrammars(g);
-			} catch (IOException e){
-				e.printStackTrace();
-				throw new EXIException("Error while creating Grammars.");
-			}
-		}
-		else{
-			String message = "Invalid Canonical Schema file location: " + xsdLocation;
-			throw new EXIException(message);
-		}
-	}
-	
-	/**
 	 * Constructs an EXI Processor using <b>xsdLocation</b> as the Canonical Schema and the respective parameters in exiConfig for its configuration.
 	 * @param xsdLocation	location of the Canonical schema file
-	 * @param exiConfig	EXISetupConfiguration instance with the necessary EXI options
+	 * @param exiConfig	EXISetupConfiguration instance with the necessary EXI options. Default options are used when null
 	 * @throws EXIException
 	 */
-	public EXIProcessor(String xsdLocation, EXISetupConfiguration exiConfig) throws EXIException{
+	public EXIProcessor(EXISetupConfiguration exiConfig) throws EXIException{
 		if(exiConfig == null)	exiConfig = new EXISetupConfiguration();
 		// create factory and EXI grammar for given schema
 		exiFactory = exiConfig;
 		
-		if(xsdLocation != null && new File(xsdLocation).isFile()){
-			try{
-				GrammarFactory grammarFactory = GrammarFactory.newInstance();
-				Grammars g = grammarFactory.createGrammars(xsdLocation, (XMLEntityResolver)new SchemaResolver(JiveGlobals.getHomeDirectory() + EXIUtils.schemasFolder));
-				exiFactory.setGrammars(g);
-			} catch (IOException e){
-				e.printStackTrace();
-				throw new EXIException("Error while creating Grammars.");
-			}
-		}
-		else{
-			String message = "Invalid Canonical Schema file location: " + xsdLocation;
-			throw new EXIException(message);
+		try{
+			GrammarFactory grammarFactory = GrammarFactory.newInstance();
+			Grammars g = grammarFactory.createGrammars(exiConfig.getCanonicalSchemaLocation(), new SchemaResolver(JiveGlobals.getHomeDirectory() + EXIUtils.schemasFolder));
+			exiFactory.setGrammars(g);
+		} catch (IOException e){
+			e.printStackTrace();
+			throw new EXIException("Error while creating Grammars.");
 		}
 	}
 	
 	
+	public EXIProcessor(EXIFactory ef) {
+		exiFactory = ef;
+	}
+
+
 	/**
 	 * Encodes an XML String into an EXI Body byte array using no schema files and default {@link EncodingOptions} and {@link FidelityOptions}.
 	 * 

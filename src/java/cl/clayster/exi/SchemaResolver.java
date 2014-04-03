@@ -14,7 +14,6 @@ public class SchemaResolver implements XMLEntityResolver {
 	HashMap<String, String> canonicalPaths = new HashMap<String, String>();
 	HashMap<String, String> names = new HashMap<String, String>();
 	
-	
 
 	public SchemaResolver (String folderLocation) throws IOException{
 		File folder = new File(folderLocation);
