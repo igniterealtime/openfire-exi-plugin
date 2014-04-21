@@ -7,14 +7,15 @@ import java.io.InputStream;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 
+import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.sax.SAXSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.apache.mina.common.ByteBuffer;
-import org.jivesoftware.util.JiveGlobals;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.SAXNotRecognizedException;
@@ -39,6 +40,7 @@ public class EXIProcessor {
 	EXIFactory exiFactory;
 	EXIResult exiResult;
 	SAXSource exiSource;
+	Transformer transformer;
 	
 	/**
 	 * Constructs an EXI Processor using <b>xsdLocation</b> as the Canonical Schema and the respective parameters in exiConfig for its configuration.
@@ -53,11 +55,16 @@ public class EXIProcessor {
 		
 		try{
 			GrammarFactory grammarFactory = GrammarFactory.newInstance();
-			Grammars g = grammarFactory.createGrammars(exiConfig.getCanonicalSchemaLocation(), new SchemaResolver(JiveGlobals.getHomeDirectory() + EXIUtils.schemasFolder));
+			Grammars g = grammarFactory.createGrammars(exiConfig.getCanonicalSchemaLocation(), new SchemaResolver());
 			exiFactory.setGrammars(g);
+			TransformerFactory tf = TransformerFactory.newInstance();
+			transformer = tf.newTransformer();
+		    transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
 		} catch (IOException e){
 			e.printStackTrace();
 			throw new EXIException("Error while creating Grammars.");
+		} catch (TransformerConfigurationException e) {
+			e.printStackTrace();
 		}
 	}
 	
@@ -96,6 +103,7 @@ public class EXIProcessor {
 	public static String decodeExiBodySchemaless(byte[] exi) throws TransformerException, EXIException, UnsupportedEncodingException{
 		TransformerFactory tf = TransformerFactory.newInstance();
 		Transformer transformer = tf.newTransformer();
+		transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
 		
 		EXIFactory factory = new EXISetupConfiguration();
 		factory.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_PREFIX, true);
@@ -114,8 +122,7 @@ public class EXIProcessor {
 		ByteArrayOutputStream xmlDecoded = new ByteArrayOutputStream();
 		transformer.transform(exiSource, new StreamResult(xmlDecoded));
 
-		String xml = xmlDecoded.toString("UTF-8");
-		return xml.substring(xml.indexOf('>') + 1);
+		return xmlDecoded.toString();
 	}
 	
 	/**
@@ -196,6 +203,7 @@ public class EXIProcessor {
 	public static String decodeSchemaless(byte[] exi) throws TransformerException, EXIException, UnsupportedEncodingException{
 		TransformerFactory tf = TransformerFactory.newInstance();
 		Transformer transformer = tf.newTransformer();
+		transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
 		
 		EXIFactory factory = DefaultEXIFactory.newInstance();
 		if(!isEXI(exi[0]))	factory.getEncodingOptions().setOption(EncodingOptions.INCLUDE_COOKIE);
@@ -206,8 +214,7 @@ public class EXIProcessor {
 		ByteArrayOutputStream xmlDecoded = new ByteArrayOutputStream();
 		transformer.transform(exiSource, new StreamResult(xmlDecoded));
 
-		String xml = xmlDecoded.toString("UTF-8");
-		return xml.substring(xml.indexOf('>') + 1);
+		return xmlDecoded.toString();
 	}
 	
 	/**
@@ -265,9 +272,6 @@ public class EXIProcessor {
 		// decoding		
 		exiSource = new EXISource(exiFactory);
 		XMLReader exiReader = exiSource.getXMLReader();
-	
-		TransformerFactory tf = TransformerFactory.newInstance();
-		Transformer transformer = tf.newTransformer();		
 		
 		InputStream exiIS = new ByteArrayInputStream(exiBytes);
 		exiSource = new SAXSource(new InputSource(exiIS));
@@ -276,7 +280,27 @@ public class EXIProcessor {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		transformer.transform(exiSource, new StreamResult(baos));		
 		
-		String xml = baos.toString("UTF-8");
-		return xml.substring(xml.indexOf('>') + 1);
+		return baos.toString();
+	}
+	
+	/**
+     * <p>Decodes a String from EXI to XML</p>
+     *
+     * @param in <code>InputStream</code> to read from.
+     * @return a character array containing the XML characters
+     * @throws EXIException if it is a not well formed EXI document
+     */
+	protected String decodeByteArray(ByteArrayInputStream exiStream) throws IOException, EXIException, TransformerException{
+		// decoding		
+		exiSource = new EXISource(exiFactory);
+		XMLReader exiReader = exiSource.getXMLReader();
+		
+		exiSource = new SAXSource(new InputSource(exiStream));
+		exiSource.setXMLReader(exiReader);
+	
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		transformer.transform(exiSource, new StreamResult(baos));		
+		
+		return baos.toString();
 	}
 }

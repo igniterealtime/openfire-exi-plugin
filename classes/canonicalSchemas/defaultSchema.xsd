@@ -3,7 +3,7 @@
 <xs:schema 
 	xmlns:xs='http://www.w3.org/2001/XMLSchema'
 	xmlns:stream='http://etherx.jabber.org/streams'
-	targetNamespace='urn:xmpp:exi:cs'
+	targetNamespace='urn:xmpp:exi:default'
 	elementFormDefault='qualified'>
 
 	<xs:import namespace='http://etherx.jabber.org/streams'/>

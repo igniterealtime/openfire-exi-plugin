@@ -15,8 +15,11 @@ public class SchemaResolver implements XMLEntityResolver {
 	HashMap<String, String> names = new HashMap<String, String>();
 	
 
-	public SchemaResolver (String folderLocation) throws IOException{
-		File folder = new File(folderLocation);
+	public SchemaResolver () throws IOException{
+		File folder = new File(EXIUtils.schemasFolder);
+		if(!folder.isDirectory()){
+			return;
+		}
         File[] listOfFiles = folder.listFiles();
         File file;
         String fileLocation;
@@ -26,7 +29,7 @@ public class SchemaResolver implements XMLEntityResolver {
 		
         for (int i = 0; i < listOfFiles.length; i++) {
         	file = listOfFiles[i];
-        	if (file.isFile() && file.getName().endsWith(".xsd") && !file.getName().endsWith("canonicalSchema.xsd")) {	
+        	if (file.isFile() && file.getName().endsWith(".xsd")) {	
         		fileLocation = file.getAbsolutePath();
 				if(fileLocation == null)	break;
 				
@@ -48,8 +51,7 @@ public class SchemaResolver implements XMLEntityResolver {
 	}
 	
 	@Override
-	public XMLInputSource resolveEntity(XMLResourceIdentifier resourceIdentifier)
-			throws XNIException, IOException {
+	public XMLInputSource resolveEntity(XMLResourceIdentifier resourceIdentifier) throws XNIException, IOException {
 		
 		String namespace = resourceIdentifier.getNamespace();
 		if(namespace != null){

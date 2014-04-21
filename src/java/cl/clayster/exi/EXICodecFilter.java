@@ -1,5 +1,6 @@
 package cl.clayster.exi;
 
+import java.io.ByteArrayInputStream;
 import java.nio.charset.Charset;
 
 import javax.xml.transform.TransformerException;
@@ -7,7 +8,8 @@ import javax.xml.transform.TransformerException;
 import org.apache.mina.common.ByteBuffer;
 import org.apache.mina.common.IoFilterAdapter;
 import org.apache.mina.common.IoSession;
-import org.jivesoftware.util.JiveGlobals;
+import org.dom4j.DocumentHelper;
+import org.dom4j.Element;
 
 import com.siemens.ct.exi.exceptions.EXIException;
 
@@ -27,11 +29,21 @@ public class EXICodecFilter extends IoFilterAdapter {
 		String msg = "";
 		if(writeRequest.getMessage() instanceof ByteBuffer){
 			msg = Charset.forName("UTF-8").decode(((ByteBuffer) writeRequest.getMessage()).buf()).toString();
-System.out.println("ENCODING WITH CODECFILTER: " + msg);
+System.out.println("ENCODING WITH CODECFILTER(" + session.hashCode() + "): " + msg);
+			if(msg.startsWith("</stream:stream>")){
+				if(session.containsAttribute(EXIAlternativeBindingFilter.flag)){
+					msg = "<streamEnd xmlns:exi='http://jabber.org/protocol/compress/exi'/>";
+				}
+				else{
+					msg = "<exi:streamEnd xmlns:exi='http://jabber.org/protocol/compress/exi'/>";
+				}
+			}
+			else if(msg.startsWith("<exi:open")){
+				msg = EXIAlternativeBindingFilter.open(null);
+			}
 			try{
 				ByteBuffer bb = ByteBuffer.allocate(msg.length());
 				bb = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(msg);
-System.out.println("ENCODED WITH CODECFILTER: " + EXIUtils.bytesToHex(bb.array()));
 				super.filterWrite(nextFilter, session, new WriteRequest(bb, writeRequest.getFuture(), writeRequest.getDestination()));
 				return;
 			} catch (EXIException e){
@@ -43,8 +55,6 @@ System.out.println("ENCODED WITH CODECFILTER: " + EXIUtils.bytesToHex(bb.array()
 
 	@Override
 	public void messageReceived(NextFilter nextFilter, IoSession session, Object message) throws Exception{
-		
-		String xml = null;
 		if (message instanceof ByteBuffer) {
 			ByteBuffer byteBuffer = (ByteBuffer) message;
 			byte[] exiBytes = (byte[]) session.getAttribute("exiBytes");
@@ -55,36 +65,38 @@ System.out.println("ENCODED WITH CODECFILTER: " + EXIUtils.bytesToHex(bb.array()
 				byte[] dest = new byte[exiBytes.length + byteBuffer.limit()];
 				System.arraycopy(exiBytes, 0, dest, 0, exiBytes.length);
 				System.arraycopy(byteBuffer.array(), 0, dest, exiBytes.length, byteBuffer.limit());
-				exiBytes = dest;				
+				exiBytes = dest;
 			}
+			
+System.out.println("DECODING(" + session.hashCode() + "): " + EXIUtils.bytesToHex(exiBytes));
 			if(!EXIProcessor.isEXI(exiBytes[0])){
 				super.messageReceived(nextFilter, session, message);
 			}
 			else{
-				// Decode EXI bytes
-				try{
-					xml = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).decodeByteArray(exiBytes);
-				} catch (TransformerException e){
-					session.setAttribute("exiBytes", exiBytes);
-					super.messageReceived(nextFilter, session, ByteBuffer.wrap("".getBytes()));
-					return;
+				ByteArrayInputStream is = new ByteArrayInputStream(exiBytes);
+				while(is.available() > 0){
+					// Decode EXI bytes
+					try{
+						String xmlStr = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).decodeByteArray(is);
+						Element xml = DocumentHelper.parseText(xmlStr).getRootElement();
+						session.setAttribute("exiBytes", null); // old bytes have been used with the last message
+	System.out.println("DECODED(" + session.hashCode() + "): " + xml.asXML());
+						if("open".equals(xml.getName())){
+							String open = EXIAlternativeBindingFilter.translateOpen(xml);
+							session.write(ByteBuffer.wrap(EXIAlternativeBindingFilter.open(open).getBytes()));
+							super.messageReceived(nextFilter, session, open);
+							return;
+						}
+						else if("streamEnd".equals(xml.getName())){
+							xmlStr = "</stream:stream>";
+						}
+						super.messageReceived(nextFilter, session, xmlStr);
+					} catch (TransformerException e){
+						session.setAttribute("exiBytes", exiBytes);
+						super.messageReceived(nextFilter, session, ByteBuffer.wrap("".getBytes()));
+						return;
+					}
 				}
-				session.setAttribute("exiBytes", null);	// old bytes have been used with the last message
-				
-				if(xml.startsWith("<exi:streamStart ")){
-					String streamStart = " <exi:streamStart from='"
-							+ JiveGlobals.getProperty("xmpp.domain", "localhost").toLowerCase()
-							+ "' version='1.0' xml:lang='en' xmlns:exi='http://jabber.org/protocol/compress/exi'>"
-							+ "<exi:xmlns prefix='' namespace='jabber:client'/><exi:xmlns prefix='streams' namespace='http://etherx.jabber.org/streams'/>"
-							+ "<exi:xmlns prefix='exi' namespace='http://jabber.org/protocol/compress/exi'/></exi:streamStart>";
-					session.write(ByteBuffer.wrap(streamStart.getBytes()));
-					throw new Exception("<exi:streamStart> PROCESSED!!!!!");
-				}
-				else if(xml.startsWith("<exi:streamEnd ")){
-					xml = "</stream:stream>";
-					session.write(exiBytes);
-				}
-	            super.messageReceived(nextFilter, session, xml);
             }
         }
 	}

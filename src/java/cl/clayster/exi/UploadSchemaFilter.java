@@ -15,7 +15,6 @@ import org.apache.mina.common.IoFilterAdapter;
 import org.apache.mina.common.IoSession;
 import org.apache.xerces.impl.dv.util.Base64;
 import org.dom4j.DocumentException;
-import org.jivesoftware.util.JiveGlobals;
 import org.xml.sax.SAXException;
 
 import com.siemens.ct.exi.exceptions.EXIException;
@@ -27,8 +26,8 @@ import com.siemens.ct.exi.exceptions.EXIException;
  *
  */
 public class UploadSchemaFilter extends IoFilterAdapter {
-	
-	EXIFilter exiFilter;
+
+	static String filterName = "uploadSchemaFilter";
 	final String uploadSchemaStartTag = "<uploadSchema";
 	final String uploadSchemaEndTag = "</uploadSchema>";
 	final String setupStartTag = "<setup";
@@ -36,9 +35,7 @@ public class UploadSchemaFilter extends IoFilterAdapter {
 	final String compressStartTag = "<compress";
 	final String compressEndTag = "</compress>";
 	
-	public UploadSchemaFilter(EXIFilter exiFilter){
-		this.exiFilter = exiFilter;
-	}
+	public UploadSchemaFilter(){}
 
 	@Override
     public void messageReceived(NextFilter nextFilter, IoSession session, Object message) throws Exception {
@@ -105,8 +102,8 @@ public class UploadSchemaFilter extends IoFilterAdapter {
 		        	msg = msg.substring(0, msg.indexOf(setupEndTag) + setupEndTag.length());
 		    
 		        	session.getFilterChain().remove("uploadSchemaFilter");
-	                exiFilter.messageReceived(nextFilter, session, msg);
-                    //throw new Exception("Upload Compressed Missing Schema PROCESSED!");
+	                super.messageReceived(nextFilter, session, msg);
+	                return;
 		        }
 		        else if(msg.startsWith("<iq") || msg.startsWith("<presence")){
 		        	session.setAttribute("baCont", null);
@@ -122,7 +119,6 @@ public class UploadSchemaFilter extends IoFilterAdapter {
 		        msg = cont;
 		        bba = baCont;
 	        }while(!cont.equals(""));
-	        throw new Exception("Upload Compressed Missing Schema PROCESSED!");
 	    }
     	// Pass the message to the next filter
     	super.messageReceived(nextFilter, session, message);
@@ -130,7 +126,7 @@ public class UploadSchemaFilter extends IoFilterAdapter {
 	
 	void uploadCompressedMissingSchema(byte[] content, String contentType, String md5Hash, String bytes, IoSession session) 
     		throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException{
-    	String filePath = JiveGlobals.getHomeDirectory() + EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
+    	String filePath = EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
 		
     	if(!"text".equals(contentType) && md5Hash != null && bytes != null){
     		String xml = "";
@@ -143,13 +139,13 @@ public class UploadSchemaFilter extends IoFilterAdapter {
 			EXIUtils.writeFile(filePath, xml);
     	}
     	
-		String ns = exiFilter.addNewSchemaToSchemasFile(filePath, md5Hash, bytes);
-		exiFilter.addNewSchemaToCanonicalSchema(filePath, ns, session);
+		String ns = EXIFilter.addNewSchemaToSchemasFile(filePath, md5Hash, bytes);
+		EXIFilter.addNewSchemaToCanonicalSchema(filePath, ns, session);
 	}
 	
 	void uploadMissingSchema(String content, IoSession session) 
     		throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException{
-    	String filePath = JiveGlobals.getHomeDirectory() + EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
+    	String filePath = EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
     	OutputStream out = new FileOutputStream(filePath);
     	
     	content = content.substring(content.indexOf('>') + 1, content.indexOf("</"));
@@ -159,7 +155,7 @@ public class UploadSchemaFilter extends IoFilterAdapter {
     	out.write(outputBytes);
     	out.close();
     	
-		String ns = exiFilter.addNewSchemaToSchemasFile(filePath, null, null);
-		exiFilter.addNewSchemaToCanonicalSchema(filePath, ns, session);
+		String ns = EXIFilter.addNewSchemaToSchemasFile(filePath, null, null);
+		EXIFilter.addNewSchemaToCanonicalSchema(filePath, ns, session);
 	}
 }
