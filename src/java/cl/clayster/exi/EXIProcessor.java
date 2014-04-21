@@ -34,13 +34,15 @@ import com.siemens.ct.exi.api.sax.SAXDecoder;
 import com.siemens.ct.exi.exceptions.EXIException;
 import com.siemens.ct.exi.grammars.Grammars;
 import com.siemens.ct.exi.helpers.DefaultEXIFactory;
+import com.siemens.ct.exi.util.SkipRootElementXMLReader;
 
 public class EXIProcessor {
 	
-	EXIFactory exiFactory;
-	EXIResult exiResult;
-	SAXSource exiSource;
-	Transformer transformer;
+	protected EXIFactory exiFactory;
+	protected EXIResult exiResult;
+	protected SAXSource exiSource;
+	protected Transformer transformer;
+	protected XMLReader exiReader, xmlReader;
 	
 	/**
 	 * Constructs an EXI Processor using <b>xsdLocation</b> as the Canonical Schema and the respective parameters in exiConfig for its configuration.
@@ -60,11 +62,25 @@ public class EXIProcessor {
 			TransformerFactory tf = TransformerFactory.newInstance();
 			transformer = tf.newTransformer();
 		    transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+			
+			exiResult = new EXIResult(exiFactory);
+	        xmlReader = XMLReaderFactory.createXMLReader();
+	        if (exiFactory.isFragment()) {
+				xmlReader = new SkipRootElementXMLReader(xmlReader);
+			}
+	        xmlReader.setContentHandler(exiResult.getHandler());
+			
+			exiSource = new EXISource(exiFactory);
+	        exiReader = exiSource.getXMLReader();
 		} catch (IOException e){
 			e.printStackTrace();
 			throw new EXIException("Error while creating Grammars.");
 		} catch (TransformerConfigurationException e) {
 			e.printStackTrace();
+			throw new EXIException("Error while creating Transformer.");
+		} catch (SAXException e) {
+			e.printStackTrace();
+			throw new EXIException("Error while creating XML reader.");
 		}
 	}
 	
@@ -237,12 +253,9 @@ public class EXIProcessor {
 	
 	public ByteBuffer encodeByteBuffer(String xml, boolean cookie) throws IOException, EXIException, SAXException, TransformerException{
 		// encoding
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		exiResult = new EXIResult(exiFactory);		
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();		
 		exiResult.setOutputStream(baos);
 		
-		XMLReader xmlReader = XMLReaderFactory.createXMLReader();
-		xmlReader.setContentHandler(exiResult.getHandler());
 		xmlReader.parse(new InputSource(new StringReader(xml)));
 		
 		byte[] exi = baos.toByteArray();
@@ -269,10 +282,6 @@ public class EXIProcessor {
      * @throws EXIException if it is a not well formed EXI document
      */
 	protected String decodeByteArray(byte[] exiBytes) throws IOException, EXIException, TransformerException{
-		// decoding		
-		exiSource = new EXISource(exiFactory);
-		XMLReader exiReader = exiSource.getXMLReader();
-		
 		InputStream exiIS = new ByteArrayInputStream(exiBytes);
 		exiSource = new SAXSource(new InputSource(exiIS));
 		exiSource.setXMLReader(exiReader);
@@ -291,10 +300,6 @@ public class EXIProcessor {
      * @throws EXIException if it is a not well formed EXI document
      */
 	protected String decodeByteArray(ByteArrayInputStream exiStream) throws IOException, EXIException, TransformerException{
-		// decoding		
-		exiSource = new EXISource(exiFactory);
-		XMLReader exiReader = exiSource.getXMLReader();
-		
 		exiSource = new SAXSource(new InputSource(exiStream));
 		exiSource.setXMLReader(exiReader);
 	
