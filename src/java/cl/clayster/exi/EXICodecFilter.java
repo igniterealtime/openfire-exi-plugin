@@ -1,5 +1,6 @@
 package cl.clayster.exi;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.Charset;
 
@@ -73,11 +74,11 @@ System.out.println("DECODING(" + session.hashCode() + "): " + EXIUtils.bytesToHe
 				super.messageReceived(nextFilter, session, message);
 			}
 			else{
-				ByteArrayInputStream is = new ByteArrayInputStream(exiBytes);
-				while(is.available() > 0){
+				BufferedInputStream bis = new BufferedInputStream(new ByteArrayInputStream(exiBytes));
+				while(bis.available() > 0){
 					// Decode EXI bytes
 					try{
-						String xmlStr = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).decodeByteArray(is);
+						String xmlStr = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).decode(bis);
 						Element xml = DocumentHelper.parseText(xmlStr).getRootElement();
 						session.setAttribute("exiBytes", null); // old bytes have been used with the last message
 	System.out.println("DECODED(" + session.hashCode() + "): " + xml.asXML());
@@ -92,7 +93,17 @@ System.out.println("DECODING(" + session.hashCode() + "): " + EXIUtils.bytesToHe
 						}
 						super.messageReceived(nextFilter, session, xmlStr);
 					} catch (TransformerException e){
-						session.setAttribute("exiBytes", exiBytes);
+						int av = bis.available();
+						if(av > 0){
+							byte[] restingBytes = new byte[bis.available()];
+							bis.read(restingBytes);
+	System.out.println("Saving: " + EXIUtils.bytesToHex(restingBytes));
+							session.setAttribute("exiBytes", restingBytes);
+						}
+						else{
+	System.out.println("Saving: " + EXIUtils.bytesToHex(exiBytes));
+							session.setAttribute("exiBytes", exiBytes);
+						}
 						super.messageReceived(nextFilter, session, ByteBuffer.wrap("".getBytes()));
 						return;
 					}

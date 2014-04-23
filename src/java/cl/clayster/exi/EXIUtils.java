@@ -42,11 +42,6 @@ public class EXIUtils {
 	final static String exiFolder = schemasFolder + "canonicalSchemas/";
 	final static String defaultCanonicalSchemaLocation = exiFolder + "defaultSchema.xsd";
 	final static String CANONICAL_SCHEMA_LOCATION = "canonicalSchemaLocation";
-	final static String ALIGNMENT = "alignment";
-	final static String BLOCK_SIZE = "blockSize";
-	final static String STRICT = "strict";
-	final static String VALUE_MAX_LENGTH = "valueMaxLength";
-	final static String VALUE_PARTITION_CAPACITY = "valuePartitionCapacity";
 	final static String EXI_CONFIG = "exiConfig";
 	final static String SCHEMA_ID = "schemaId";
 	final static String EXI_PROCESSOR = EXIProcessor.class.getName();
@@ -66,6 +61,8 @@ public class EXIUtils {
 	        hexChars[j * 2] = hexArray[v >>> 4];
 	        hexChars[j * 2 + 1] = hexArray[v & 0x0F];
 	    }
+	    return new String(hexChars);
+	    /*
 	    // remove extra 000000s in the end of the string
 	    int i = hexChars.length - 1;
 	    while(hexChars[i] == '0'){
@@ -77,6 +74,7 @@ public class EXIUtils {
 	    String str = new String(hexChars);
 	    str = str.substring(0, i+1);
 	    return str;
+	    */
 	}
 	
 	public static String readFile(String fileLocation){
@@ -283,11 +281,11 @@ public class EXIUtils {
             BufferedWriter stanzasWriter = null;
             stanzasWriter = new BufferedWriter(new FileWriter(EXIUtils.schemasFileLocation));
             
-            stanzasWriter.write("<setupResponse>");
+            stanzasWriter.write("<schemas>");
             for(String ns : namespaces){
             	stanzasWriter.write("\n\t" + schemasStanzas.get(ns));
             }
-            stanzasWriter.write("\n</setupResponse>");
+            stanzasWriter.write("\n</schemas>");
 			stanzasWriter.close();
 		}catch (NoSuchAlgorithmException e){
 			e.printStackTrace();

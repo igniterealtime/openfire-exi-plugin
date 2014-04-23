@@ -34,7 +34,6 @@ import com.siemens.ct.exi.api.sax.SAXDecoder;
 import com.siemens.ct.exi.exceptions.EXIException;
 import com.siemens.ct.exi.grammars.Grammars;
 import com.siemens.ct.exi.helpers.DefaultEXIFactory;
-import com.siemens.ct.exi.util.SkipRootElementXMLReader;
 
 public class EXIProcessor {
 	
@@ -65,9 +64,6 @@ public class EXIProcessor {
 			
 			exiResult = new EXIResult(exiFactory);
 	        xmlReader = XMLReaderFactory.createXMLReader();
-	        if (exiFactory.isFragment()) {
-				xmlReader = new SkipRootElementXMLReader(xmlReader);
-			}
 	        xmlReader.setContentHandler(exiResult.getHandler());
 			
 			exiSource = new EXISource(exiFactory);
@@ -138,7 +134,7 @@ public class EXIProcessor {
 		ByteArrayOutputStream xmlDecoded = new ByteArrayOutputStream();
 		transformer.transform(exiSource, new StreamResult(xmlDecoded));
 
-		return xmlDecoded.toString();
+		return xmlDecoded.toString("UTF-8");
 	}
 	
 	/**
@@ -230,7 +226,7 @@ public class EXIProcessor {
 		ByteArrayOutputStream xmlDecoded = new ByteArrayOutputStream();
 		transformer.transform(exiSource, new StreamResult(xmlDecoded));
 
-		return xmlDecoded.toString();
+		return xmlDecoded.toString("UTF-8");
 	}
 	
 	/**
@@ -289,7 +285,24 @@ public class EXIProcessor {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		transformer.transform(exiSource, new StreamResult(baos));		
 		
-		return baos.toString();
+		return baos.toString("UTF-8");
+	}
+	
+	/**
+     * <p>Decodes a String from EXI to XML</p>
+     *
+     * @param in <code>InputStream</code> to read from.
+     * @return a character array containing the XML characters
+     * @throws EXIException if it is a not well formed EXI document
+     */
+	protected String decode(InputStream exiIS) throws IOException, EXIException, TransformerException{
+		exiSource = new SAXSource(new InputSource(exiIS));
+		exiSource.setXMLReader(exiReader);
+	
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		transformer.transform(exiSource, new StreamResult(baos));		
+		
+		return baos.toString("UTF-8");
 	}
 	
 	/**
@@ -306,6 +319,6 @@ public class EXIProcessor {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		transformer.transform(exiSource, new StreamResult(baos));		
 		
-		return baos.toString();
+		return baos.toString("UTF-8");
 	}
 }

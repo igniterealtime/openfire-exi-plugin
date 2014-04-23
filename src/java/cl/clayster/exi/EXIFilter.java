@@ -199,58 +199,74 @@ System.out.println("dismissing msg: " + msg);
 	        	}
 	        }
 	        
-        	EXISetupConfiguration exiConfig = new EXISetupConfiguration();
-	        // guardar el valor de blockSize y strict en session
-	        String aux = setup.attributeValue(EXIUtils.ALIGNMENT);
-	        if(aux != null){
-	        	CodingMode cm = CodingMode.BIT_PACKED;
-				if(aux.equals("bit-packed"));	
-				else if(aux.equals("byte-packed"))	cm = CodingMode.BYTE_PACKED;
-				else if(aux.equals("pre-compression"))	cm = CodingMode.PRE_COMPRESSION;
-				else if(aux.equals("compression"))	cm = CodingMode.COMPRESSION;
-				exiConfig.setCodingMode(cm);
-			}
-	        aux = setup.attributeValue(EXIUtils.BLOCK_SIZE);
-			if(aux != null){
-				exiConfig.setBlockSize(Integer.parseInt(aux));
-			}
-			aux = setup.attributeValue(EXIUtils.STRICT);
-			if(aux != null){
-				try {
-					exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_STRICT, Boolean.valueOf(aux));
-				} catch (UnsupportedOption e) {
-					e.printStackTrace();
-				}
-			}
-			aux = setup.attributeValue(EXIUtils.VALUE_MAX_LENGTH);
-			if(aux != null){
-				exiConfig.setValueMaxLength(Integer.parseInt(aux));
-			}
-			aux = setup.attributeValue(EXIUtils.VALUE_PARTITION_CAPACITY);
-			if(aux != null || "".equals(aux)){
-				exiConfig.setValuePartitionCapacity(Integer.parseInt(aux));
-			}
-	        /**
-	         * configId:
-	         *  The first 36 (indexes 0-35) are just the UUID, number 37 is '_' (index 36)
-				The next digit (index 37) represents the alignment (0=bit-packed, 1=byte-packed, 2=pre-compression, 3=compression)
-				The next digit (index 38) represents if it is strict or not
-				The next number represents blocksize (until the next '_')
-				Next number between dashes is valueMaxLength
-				Last number is valuePartitionCapacity
-	         */
-			// generate canonical schema
-	        configId = createCanonicalSchema(setup);
-	        exiConfig.setSchemaId(configId);
-	        session.setAttribute(EXIUtils.EXI_CONFIG, exiConfig);
-	        session.setAttribute(EXIUtils.SCHEMA_ID, configId);	// still necessary for uploading schemas with UploadSchemaFilter
-	        
-	        
 	        if(!agreement){
 	        	session.getFilterChain().addBefore(EXIFilter.filterName, UploadSchemaFilter.filterName, new UploadSchemaFilter());
 	        }
 	        else{
-	        	exiConfig.saveConfiguration();
+	        	EXISetupConfiguration exiConfig = new EXISetupConfiguration();
+		        // guardar el valor de blockSize y strict en session
+		        String aux = setup.attributeValue(SetupValues.ALIGNMENT);
+		        if(aux != null){
+					exiConfig.setCodingMode(SetupValues.getCodingMode(aux));
+				}
+		        else{
+		        	aux = setup.attributeValue(SetupValues.COMPRESSION);
+		        	if(aux != null){
+		        		exiConfig.setCodingMode(CodingMode.COMPRESSION);
+		        	}
+		        }
+		        aux = setup.attributeValue(SetupValues.BLOCK_SIZE);
+				if(aux != null){
+					exiConfig.setBlockSize(Integer.parseInt(aux));
+				}
+				aux = setup.attributeValue(SetupValues.STRICT);
+				try {
+					if(aux != null && aux.equals("true")){
+						exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_STRICT, true);
+					}
+					else{
+						aux = setup.attributeValue(SetupValues.PRESERVE_COMMENTS);
+						if(aux != null && "true".equals(aux)){
+							exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_COMMENT, true);
+						}
+						aux = setup.attributeValue(SetupValues.PRESERVE_DTD);
+						if(aux != null && "true".equals(aux)){
+							exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_DTD, true);
+						}
+						aux = setup.attributeValue(SetupValues.PRESERVE_LEXICAL);
+						if(aux != null && "true".equals(aux)){
+							exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_LEXICAL_VALUE, true);
+						}
+						aux = setup.attributeValue(SetupValues.PRESERVE_PIS);
+						if(aux != null && "true".equals(aux)){
+							exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_PI, true);
+						}
+						aux = setup.attributeValue(SetupValues.PRESERVE_PREFIXES);
+						if(aux != null && "true".equals(aux)){
+							exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_PREFIX, true);
+						}
+					}
+				} catch (UnsupportedOption e) {
+					e.printStackTrace();
+				}
+				aux = setup.attributeValue(SetupValues.VALUE_MAX_LENGTH);
+				if(aux != null){
+					exiConfig.setValueMaxLength(Integer.parseInt(aux));
+				}
+				aux = setup.attributeValue(SetupValues.VALUE_PARTITION_CAPACITY);
+				if(aux != null || "".equals(aux)){
+					exiConfig.setValuePartitionCapacity(Integer.parseInt(aux));
+				}
+				aux = setup.attributeValue(SetupValues.WIDE_BUFFERS);
+				if(aux != null || "".equals(aux)){
+					exiConfig.setSessionWideBuffers(true);
+				}
+				// generate canonical schema
+		        configId = createCanonicalSchema(setup);
+		        exiConfig.setSchemaId(configId);
+		        session.setAttribute(EXIUtils.EXI_CONFIG, exiConfig);
+		        session.setAttribute(EXIUtils.SCHEMA_ID, configId);	// still necessary for uploading schemas with UploadSchemaFilter
+		        exiConfig.saveConfiguration();
 	        	setup.addAttribute("configurationId", exiConfig.getConfigutarionId());
 	        }
 	        setup.addAttribute("agreement", String.valueOf(agreement));
@@ -345,10 +361,6 @@ System.out.println("dismissing msg: " + msg);
      */
     void addCodec(IoSession session){
     	IoFilterChain fc = session.getFilterChain();
-//TODO: eliminar println    	
-System.out.println("INSERTING CODECFILTER(" + session.hashCode() + ")");
-
-
     	fc.addBefore("xmpp", "exiCodec", new EXICodecFilter());
     	if(fc.contains(EXIFilter.filterName))
     			session.getFilterChain().remove(EXIFilter.filterName);

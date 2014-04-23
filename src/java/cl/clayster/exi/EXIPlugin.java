@@ -23,6 +23,7 @@ public class EXIPlugin implements Plugin{
         ConnectionManagerImpl connManager = (ConnectionManagerImpl) XMPPServer.getInstance().getConnectionManager();
         SocketAcceptor socketAcceptor = connManager.getSocketAcceptor();
         if (socketAcceptor == null)	return;
+        
     	socketAcceptor.getFilterChain().addBefore("xmpp", EXIAlternativeBindingFilter.filterName, new EXIAlternativeBindingFilter());
     	EXIFilter exiFilter = new EXIFilter();
     	socketAcceptor.getFilterChain().addAfter("xmpp", EXIFilter.filterName, exiFilter);

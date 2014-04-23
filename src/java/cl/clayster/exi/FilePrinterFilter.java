@@ -19,7 +19,7 @@ public class FilePrinterFilter extends IoFilterAdapter {
 	@Override
 	public void messageReceived(NextFilter nextFilter, IoSession session, Object message) throws Exception {
 		if(message instanceof String){
-			addMsg(EXIUtils.bytesToHex(((String)message).getBytes()));
+			addMsg(EXIUtils.bytesToHex(((String)message).getBytes()), session.hashCode());
 		}
 		else if (message instanceof ByteBuffer) {
     		ByteBuffer byteBuffer = (ByteBuffer) message;
@@ -27,16 +27,16 @@ public class FilePrinterFilter extends IoFilterAdapter {
             int currentPos = byteBuffer.position();
             
 			byte[] msg = byteBuffer.array();
-			addMsg(EXIUtils.bytesToHex(msg));
+			addMsg(EXIUtils.bytesToHex(msg), session.hashCode());
 			
 			byteBuffer.position(currentPos);
 		}
 		super.messageReceived(nextFilter, session, message);
 	}
 	
-	private void addMsg(String msg) throws IOException {
-		System.out.println("writing: " + msg);
-		FileWriter f = new FileWriter("output.txt", true);
+	private void addMsg(String msg, int id) throws IOException {
+		//System.out.println("writing for " + id + ": " + msg);
+		FileWriter f = new FileWriter("output" + id + ".txt", true);
 		f.write(msg + "\n");
 		f.close();
 	}

@@ -101,7 +101,7 @@ public class UploadSchemaFilter extends IoFilterAdapter {
 		        	session.setAttribute("cont", cont);
 		        	msg = msg.substring(0, msg.indexOf(setupEndTag) + setupEndTag.length());
 		    
-		        	session.getFilterChain().remove("uploadSchemaFilter");
+		        	session.getFilterChain().remove(filterName);
 	                super.messageReceived(nextFilter, session, msg);
 	                return;
 		        }
