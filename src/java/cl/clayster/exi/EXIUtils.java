@@ -74,7 +74,7 @@ public class EXIUtils {
 	    String str = new String(hexChars);
 	    str = str.substring(0, i+1);
 	    return str;
-	    */
+	    /**/
 	}
 	
 	public static String readFile(String fileLocation){

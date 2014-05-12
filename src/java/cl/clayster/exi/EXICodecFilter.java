@@ -60,7 +60,8 @@ System.out.println("ENCODING WITH CODECFILTER(" + session.hashCode() + "): " + m
 			ByteBuffer byteBuffer = (ByteBuffer) message;
 			byte[] exiBytes = (byte[]) session.getAttribute("exiBytes");
 			if(exiBytes == null){
-				exiBytes = byteBuffer.array();
+				exiBytes = new byte[byteBuffer.limit()];
+				System.arraycopy(byteBuffer.array(), 0, exiBytes, 0, exiBytes.length);
 			}
 			else{
 				byte[] dest = new byte[exiBytes.length + byteBuffer.limit()];
@@ -78,6 +79,7 @@ System.out.println("DECODING(" + session.hashCode() + "): " + EXIUtils.bytesToHe
 				while(bis.available() > 0){
 					// Decode EXI bytes
 					try{
+						bis.mark(exiBytes.length);
 						String xmlStr = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).decode(bis);
 						Element xml = DocumentHelper.parseText(xmlStr).getRootElement();
 						session.setAttribute("exiBytes", null); // old bytes have been used with the last message
@@ -93,17 +95,11 @@ System.out.println("DECODING(" + session.hashCode() + "): " + EXIUtils.bytesToHe
 						}
 						super.messageReceived(nextFilter, session, xmlStr);
 					} catch (TransformerException e){
-						int av = bis.available();
-						if(av > 0){
-							byte[] restingBytes = new byte[bis.available()];
-							bis.read(restingBytes);
-	System.out.println("Saving: " + EXIUtils.bytesToHex(restingBytes));
-							session.setAttribute("exiBytes", restingBytes);
-						}
-						else{
-	System.out.println("Saving: " + EXIUtils.bytesToHex(exiBytes));
-							session.setAttribute("exiBytes", exiBytes);
-						}
+						bis.reset();
+						byte[] restingBytes = new byte[bis.available()];
+						bis.read(restingBytes);
+System.out.println("Saving: " + EXIUtils.bytesToHex(restingBytes));
+						session.setAttribute("exiBytes", restingBytes);
 						super.messageReceived(nextFilter, session, ByteBuffer.wrap("".getBytes()));
 						return;
 					}

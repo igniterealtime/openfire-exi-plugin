@@ -54,7 +54,6 @@ public class EXIFilter extends IoFilterAdapter {
     		String msg = Charset.forName("UTF-8").decode(((ByteBuffer) writeRequest.getMessage()).buf()).toString();
     		((ByteBuffer) writeRequest.getMessage()).position(currentPos);
     		if(session.containsAttribute(setupReceived) && msg.contains("http://jabber.org/protocol/compress") && msg.contains("unsupported-method")){
-System.out.println("dismissing msg: " + msg);
     			return;
     		}
     		else if(msg.contains("</compression>")){
@@ -195,12 +194,12 @@ System.out.println("dismissing msg: " + msg);
 	        	}
 	        	if(missingSchema){
 	        		auxSchema1.setName("missingSchema");
-	        		if(agreement)	agreement = false;
+	        		agreement = false;
 	        	}
 	        }
 	        
 	        if(!agreement){
-	        	session.getFilterChain().addBefore(EXIFilter.filterName, UploadSchemaFilter.filterName, new UploadSchemaFilter());
+	        	session.getFilterChain().addBefore("xmpp", UploadSchemaFilter.filterName, new UploadSchemaFilter());
 	        }
 	        else{
 	        	EXISetupConfiguration exiConfig = new EXISetupConfiguration();
