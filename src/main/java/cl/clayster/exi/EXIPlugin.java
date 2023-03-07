@@ -1,13 +1,13 @@
 package cl.clayster.exi;
 
-import java.io.File;
-import java.io.IOException;
-
-import org.apache.mina.transport.socket.nio.SocketAcceptor;
+import org.apache.mina.transport.socket.SocketAcceptor;
 import org.jivesoftware.openfire.XMPPServer;
 import org.jivesoftware.openfire.container.Plugin;
 import org.jivesoftware.openfire.container.PluginManager;
 import org.jivesoftware.openfire.spi.ConnectionManagerImpl;
+
+import java.io.File;
+import java.io.IOException;
 
 public class EXIPlugin implements Plugin{
 

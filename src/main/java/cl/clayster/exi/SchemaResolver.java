@@ -1,13 +1,13 @@
 package cl.clayster.exi;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
-
 import org.apache.xerces.xni.XMLResourceIdentifier;
 import org.apache.xerces.xni.XNIException;
 import org.apache.xerces.xni.parser.XMLEntityResolver;
 import org.apache.xerces.xni.parser.XMLInputSource;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
 
 public class SchemaResolver implements XMLEntityResolver {
 	

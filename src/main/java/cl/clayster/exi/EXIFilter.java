@@ -1,37 +1,28 @@
 package cl.clayster.exi;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.charset.Charset;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Calendar;
-import java.util.Iterator;
-
-import javax.xml.transform.TransformerException;
-
+import com.siemens.ct.exi.core.CodingMode;
+import com.siemens.ct.exi.core.FidelityOptions;
+import com.siemens.ct.exi.core.exceptions.EXIException;
+import com.siemens.ct.exi.core.exceptions.UnsupportedOption;
 import org.apache.commons.io.FileUtils;
-import org.apache.mina.common.ByteBuffer;
-import org.apache.mina.common.IoFilterAdapter;
-import org.apache.mina.common.IoFilterChain;
-import org.apache.mina.common.IoSession;
+import org.apache.mina.core.buffer.IoBuffer;
+import org.apache.mina.core.filterchain.IoFilterAdapter;
+import org.apache.mina.core.filterchain.IoFilterChain;
+import org.apache.mina.core.session.IoSession;
+import org.apache.mina.core.write.WriteRequest;
 import org.apache.xerces.impl.dv.util.Base64;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 import org.xml.sax.SAXException;
 
-import com.siemens.ct.exi.CodingMode;
-import com.siemens.ct.exi.FidelityOptions;
-import com.siemens.ct.exi.exceptions.EXIException;
-import com.siemens.ct.exi.exceptions.UnsupportedOption;
+import javax.xml.transform.TransformerException;
+import java.io.*;
+import java.nio.charset.Charset;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Calendar;
+import java.util.Iterator;
 
 /**
  * This class is a filter that recognizes EXI sessions and adds an EXIEncoder and an EXIDecoder to those sessions. 
@@ -49,16 +40,16 @@ public class EXIFilter extends IoFilterAdapter {
     @Override
     public void filterWrite(NextFilter nextFilter, IoSession session, WriteRequest writeRequest) throws Exception {
     	//"<failure xmlns='http://jabber.org/protocol/compress'><unsupported-method/></failure>"
-    	if(writeRequest.getMessage() instanceof ByteBuffer){
-    		int currentPos = ((ByteBuffer) writeRequest.getMessage()).position();
-    		String msg = Charset.forName("UTF-8").decode(((ByteBuffer) writeRequest.getMessage()).buf()).toString();
-    		((ByteBuffer) writeRequest.getMessage()).position(currentPos);
+    	if(writeRequest.getMessage() instanceof IoBuffer){
+    		int currentPos = ((IoBuffer) writeRequest.getMessage()).position();
+    		String msg = Charset.forName("UTF-8").decode(((IoBuffer) writeRequest.getMessage()).buf()).toString();
+    		((IoBuffer) writeRequest.getMessage()).position(currentPos);
     		if(session.containsAttribute(setupReceived) && msg.contains("http://jabber.org/protocol/compress") && msg.contains("unsupported-method")){
     			return;
     		}
     		else if(msg.contains("</compression>")){
     			msg = msg.replace("</compression>", "<method>exi</method></compression>");
-    			writeRequest = new WriteRequest(ByteBuffer.wrap(msg.getBytes()), writeRequest.getFuture(), writeRequest.getDestination());
+                writeRequest.setMessage(IoBuffer.wrap(msg.getBytes()));
     		}
     	}
     	super.filterWrite(nextFilter, session, writeRequest);
@@ -85,7 +76,7 @@ public class EXIFilter extends IoFilterAdapter {
 	    		if(setupResponse == null){
 	    			System.err.println("An error occurred while processing the negotiation.");
 	    		}else{
-	    			ByteBuffer bb = ByteBuffer.wrap(setupResponse.getBytes());
+                    IoBuffer bb = IoBuffer.wrap(setupResponse.getBytes());
 	    	        session.write(bb);
 	    		}
 	    		return;
@@ -111,7 +102,7 @@ public class EXIFilter extends IoFilterAdapter {
 	    				respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url
 	    						+ "' result='false'><error message='No free space left.'/></downloadSchemaResponse>";
 	    			}
-	    			session.write(ByteBuffer.wrap((respuesta).getBytes()));
+	    			session.write(IoBuffer.wrap((respuesta).getBytes()));
 	    			return;
 				}
 			}
@@ -120,12 +111,12 @@ public class EXIFilter extends IoFilterAdapter {
 				if(exiProcessor != null){
 					session.setAttribute(EXIUtils.EXI_PROCESSOR, exiProcessor);
 					String respuesta = "<compressed xmlns='http://jabber.org/protocol/compress'/>";
-	    			ByteBuffer bb = ByteBuffer.wrap(respuesta.getBytes());
+                    IoBuffer bb = IoBuffer.wrap(respuesta.getBytes());
 	    	        session.write(bb);
 	    	        addCodec(session);
 	    		}
 	    		else{
-	    			ByteBuffer bb = ByteBuffer.wrap("<failure xmlns=\'http://jabber.org/protocol/compress\'><setup-failed/></failure>".getBytes());
+                    IoBuffer bb = IoBuffer.wrap("<failure xmlns=\'http://jabber.org/protocol/compress\'><setup-failed/></failure>".getBytes());
 	    	        session.write(bb);
 	    		}
 				return;

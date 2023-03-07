@@ -1,39 +1,24 @@
 package cl.clayster.exi;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringReader;
-import java.io.UnsupportedEncodingException;
-
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.sax.SAXSource;
-import javax.xml.transform.stream.StreamResult;
-
-import org.apache.mina.common.ByteBuffer;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
-import org.xml.sax.SAXNotRecognizedException;
-import org.xml.sax.SAXNotSupportedException;
-import org.xml.sax.XMLReader;
+import com.siemens.ct.exi.core.Constants;
+import com.siemens.ct.exi.core.EXIFactory;
+import com.siemens.ct.exi.core.EncodingOptions;
+import com.siemens.ct.exi.core.FidelityOptions;
+import com.siemens.ct.exi.core.exceptions.EXIException;
+import com.siemens.ct.exi.core.grammars.Grammars;
+import com.siemens.ct.exi.core.helpers.DefaultEXIFactory;
+import com.siemens.ct.exi.grammars.GrammarFactory;
+import com.siemens.ct.exi.main.api.sax.EXIResult;
+import com.siemens.ct.exi.main.api.sax.EXISource;
+import com.siemens.ct.exi.main.api.sax.SAXDecoder;
+import org.apache.mina.core.buffer.IoBuffer;
+import org.xml.sax.*;
 import org.xml.sax.helpers.XMLReaderFactory;
 
-import com.siemens.ct.exi.Constants;
-import com.siemens.ct.exi.EXIFactory;
-import com.siemens.ct.exi.EncodingOptions;
-import com.siemens.ct.exi.FidelityOptions;
-import com.siemens.ct.exi.GrammarFactory;
-import com.siemens.ct.exi.api.sax.EXIResult;
-import com.siemens.ct.exi.api.sax.EXISource;
-import com.siemens.ct.exi.api.sax.SAXDecoder;
-import com.siemens.ct.exi.exceptions.EXIException;
-import com.siemens.ct.exi.grammars.Grammars;
-import com.siemens.ct.exi.helpers.DefaultEXIFactory;
+import javax.xml.transform.*;
+import javax.xml.transform.sax.SAXSource;
+import javax.xml.transform.stream.StreamResult;
+import java.io.*;
 
 public class EXIProcessor {
 	
@@ -121,7 +106,7 @@ public class EXIProcessor {
 		factory.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_PREFIX, true);
 		
 		SAXSource exiSource = new SAXSource(new InputSource(new ByteArrayInputStream(exi)));
-		SAXDecoder saxDecoder = (SAXDecoder) factory.createEXIReader();
+		SAXDecoder saxDecoder = new SAXDecoder(factory);
 		try {
 			saxDecoder.setFeature(Constants.W3C_EXI_FEATURE_BODY_ONLY, Boolean.TRUE);
 		} catch (SAXNotRecognizedException e) {
@@ -221,7 +206,7 @@ public class EXIProcessor {
 		if(!isEXI(exi[0]))	factory.getEncodingOptions().setOption(EncodingOptions.INCLUDE_COOKIE);
 		
 		SAXSource exiSource = new SAXSource(new InputSource(new ByteArrayInputStream(exi)));
-		exiSource.setXMLReader(factory.createEXIReader());
+		exiSource.setXMLReader(new SAXDecoder(factory));
 
 		ByteArrayOutputStream xmlDecoded = new ByteArrayOutputStream();
 		transformer.transform(exiSource, new StreamResult(xmlDecoded));
@@ -247,7 +232,7 @@ public class EXIProcessor {
 		return "$EXI".equals(new String(ba));
 	}
 	
-	public ByteBuffer encodeByteBuffer(String xml, boolean cookie) throws IOException, EXIException, SAXException, TransformerException{
+	public IoBuffer encodeByteBuffer(String xml, boolean cookie) throws IOException, EXIException, SAXException, TransformerException{
 		// encoding
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();		
 		exiResult.setOutputStream(baos);
@@ -262,10 +247,10 @@ public class EXIProcessor {
 			System.arraycopy(c, 0, aux, 0, c.length);
 			exi = aux;
 		}
-		return ByteBuffer.wrap(exi);
+		return IoBuffer.wrap(exi);
 	}
 	
-	public ByteBuffer encodeByteBuffer(String xml) throws IOException, EXIException, SAXException, TransformerException{
+	public IoBuffer encodeByteBuffer(String xml) throws IOException, EXIException, SAXException, TransformerException{
 		return encodeByteBuffer(xml, false);
 	}
 	

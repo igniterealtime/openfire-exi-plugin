@@ -1,18 +1,17 @@
 package cl.clayster.exi;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.nio.charset.Charset;
-
-import javax.xml.transform.TransformerException;
-
-import org.apache.mina.common.ByteBuffer;
-import org.apache.mina.common.IoFilterAdapter;
-import org.apache.mina.common.IoSession;
+import com.siemens.ct.exi.core.exceptions.EXIException;
+import org.apache.mina.core.buffer.IoBuffer;
+import org.apache.mina.core.filterchain.IoFilterAdapter;
+import org.apache.mina.core.session.IoSession;
+import org.apache.mina.core.write.WriteRequest;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 
-import com.siemens.ct.exi.exceptions.EXIException;
+import javax.xml.transform.TransformerException;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.Charset;
 
 /**
  *  Decodes EXI stanzas from a specific IoSession, it stores the JID address of the respective user, allowing to easily relate both sessions 
@@ -28,8 +27,8 @@ public class EXICodecFilter extends IoFilterAdapter {
 	@Override
 	public void filterWrite(NextFilter nextFilter, IoSession session, WriteRequest writeRequest) throws Exception {
 		String msg = "";
-		if(writeRequest.getMessage() instanceof ByteBuffer){
-			msg = Charset.forName("UTF-8").decode(((ByteBuffer) writeRequest.getMessage()).buf()).toString();
+		if(writeRequest.getMessage() instanceof IoBuffer){
+			msg = Charset.forName("UTF-8").decode(((IoBuffer) writeRequest.getMessage()).buf()).toString();
 System.out.println("ENCODING WITH CODECFILTER(" + session.hashCode() + "): " + msg);
 			if(msg.startsWith("</stream:stream>")){
 				if(session.containsAttribute(EXIAlternativeBindingFilter.flag)){
@@ -43,9 +42,10 @@ System.out.println("ENCODING WITH CODECFILTER(" + session.hashCode() + "): " + m
 				msg = EXIAlternativeBindingFilter.open(null);
 			}
 			try{
-				ByteBuffer bb = ByteBuffer.allocate(msg.length());
+                IoBuffer bb = IoBuffer.allocate(msg.length());
 				bb = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(msg);
-				super.filterWrite(nextFilter, session, new WriteRequest(bb, writeRequest.getFuture(), writeRequest.getDestination()));
+                writeRequest.setMessage(bb);
+				super.filterWrite(nextFilter, session, writeRequest);
 				return;
 			} catch (EXIException e){
 				e.printStackTrace();
@@ -56,8 +56,8 @@ System.out.println("ENCODING WITH CODECFILTER(" + session.hashCode() + "): " + m
 
 	@Override
 	public void messageReceived(NextFilter nextFilter, IoSession session, Object message) throws Exception{
-		if (message instanceof ByteBuffer) {
-			ByteBuffer byteBuffer = (ByteBuffer) message;
+		if (message instanceof IoBuffer) {
+            IoBuffer byteBuffer = (IoBuffer) message;
 			byte[] exiBytes = (byte[]) session.getAttribute("exiBytes");
 			if(exiBytes == null){
 				exiBytes = new byte[byteBuffer.limit()];
@@ -86,7 +86,7 @@ System.out.println("DECODING(" + session.hashCode() + "): " + EXIUtils.bytesToHe
 	System.out.println("DECODED(" + session.hashCode() + "): " + xml.asXML());
 						if("open".equals(xml.getName())){
 							String open = EXIAlternativeBindingFilter.translateOpen(xml);
-							session.write(ByteBuffer.wrap(EXIAlternativeBindingFilter.open(open).getBytes()));
+							session.write(IoBuffer.wrap(EXIAlternativeBindingFilter.open(open).getBytes()));
 							super.messageReceived(nextFilter, session, open);
 							return;
 						}
@@ -100,7 +100,7 @@ System.out.println("DECODING(" + session.hashCode() + "): " + EXIUtils.bytesToHe
 						bis.read(restingBytes);
 System.out.println("Saving: " + EXIUtils.bytesToHex(restingBytes));
 						session.setAttribute("exiBytes", restingBytes);
-						super.messageReceived(nextFilter, session, ByteBuffer.wrap("".getBytes()));
+						super.messageReceived(nextFilter, session, IoBuffer.wrap("".getBytes()));
 						return;
 					}
 				}

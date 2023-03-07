@@ -1,20 +1,19 @@
 package cl.clayster.exi;
 
-import java.nio.charset.Charset;
-import java.util.Iterator;
-
-import javax.xml.transform.TransformerException;
-
-import org.apache.mina.common.ByteBuffer;
-import org.apache.mina.common.IoFilterAdapter;
-import org.apache.mina.common.IoSession;
+import com.siemens.ct.exi.core.coder.EXIHeaderDecoder;
+import com.siemens.ct.exi.core.exceptions.EXIException;
+import com.siemens.ct.exi.core.io.channel.BitDecoderChannel;
+import org.apache.mina.core.buffer.IoBuffer;
+import org.apache.mina.core.filterchain.IoFilterAdapter;
+import org.apache.mina.core.session.IoSession;
+import org.apache.mina.core.write.WriteRequest;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 import org.jivesoftware.util.JiveGlobals;
 
-import com.siemens.ct.exi.core.EXIHeaderDecoder;
-import com.siemens.ct.exi.exceptions.EXIException;
-import com.siemens.ct.exi.io.channel.BitDecoderChannel;
+import javax.xml.transform.TransformerException;
+import java.nio.charset.Charset;
+import java.util.Iterator;
 
 /**
  * This class recognizes EXI Alternative Binding. There is only two possible messages that can be received, otherwise the filter will be eliminated from 
@@ -34,22 +33,22 @@ public class EXIAlternativeBindingFilter extends IoFilterAdapter {
 	
 	@Override
 	public void filterWrite(NextFilter nextFilter, IoSession session, WriteRequest writeRequest) throws Exception {
-		if(writeRequest.getMessage() instanceof ByteBuffer){
-			ByteBuffer bb = (ByteBuffer) writeRequest.getMessage();
-			String msg = Charset.forName("UTF-8").decode(((ByteBuffer) writeRequest.getMessage()).buf()).toString();
+		if(writeRequest.getMessage() instanceof IoBuffer){
+            IoBuffer bb = (IoBuffer) writeRequest.getMessage();
+			String msg = Charset.forName("UTF-8").decode(((IoBuffer) writeRequest.getMessage()).buf()).toString();
 			if(msg.contains("<stream:stream ")){
 				String open = open(EXIUtils.getAttributeValue(msg, "id"));
 System.out.println("ENCODING to send: " + open);
 				bb = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(open, true);
-				super.filterWrite(nextFilter, session, new WriteRequest(bb, writeRequest.getFuture(), writeRequest.getDestination()));
+                writeRequest.setMessage(bb);
+				super.filterWrite(nextFilter, session, writeRequest);
 				
 				if(msg.contains("<stream:features")){
 					msg = msg.substring(msg.indexOf("<stream:features"))
 							.replaceAll("<stream:features", "<stream:features xmlns:stream=\"http://etherx.jabber.org/streams\"");
 System.out.println("ENCODING to send: " + msg);
-					super.filterWrite(nextFilter, session, 
-							new WriteRequest(((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(msg)
-									, writeRequest.getFuture(), writeRequest.getDestination()));
+                    writeRequest.setMessage(((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(msg));
+					super.filterWrite(nextFilter, session, writeRequest);
 				}
 				return;
 			}
@@ -66,7 +65,8 @@ System.out.println("ENCODING to send: " + msg);
 			}
 System.out.println("ENCODING to send: " + msg);
 			bb = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(msg);
-			super.filterWrite(nextFilter, session, new WriteRequest(bb, writeRequest.getFuture(), writeRequest.getDestination()));
+            writeRequest.setMessage(bb);
+			super.filterWrite(nextFilter, session, writeRequest);
 		}
 	}
 	
@@ -74,9 +74,9 @@ System.out.println("ENCODING to send: " + msg);
 	@Override
 	public void messageReceived(NextFilter nextFilter, IoSession session, Object message) throws Exception {
 		// Decode the bytebuffer and print it to the stdout
-    	if (message instanceof ByteBuffer) {
+    	if (message instanceof IoBuffer) {
     		String msg;
-    		ByteBuffer byteBuffer = (ByteBuffer) message;
+            IoBuffer byteBuffer = (IoBuffer) message;
     		// Keep current position in the buffer
             int currentPos = byteBuffer.position();
             
@@ -96,7 +96,7 @@ System.out.println("ENCODING to send: " + msg);
 					session.setAttribute(EXIAlternativeBindingFilter.quickSetupFlag, false);
 					try{
 						EXIHeaderDecoder headerDecoder = new EXIHeaderDecoder();
-		            	BitDecoderChannel headerChannel = new BitDecoderChannel(((ByteBuffer)message).asInputStream());
+		            	BitDecoderChannel headerChannel = new BitDecoderChannel(((IoBuffer)message).asInputStream());
 		            	EXISetupConfiguration exiConfig = new EXISetupConfiguration(true);
 		            	exiConfig.setSchemaIdResolver(new SchemaIdResolver());
 		            	exiConfig = (EXISetupConfiguration) headerDecoder.parse(headerChannel, exiConfig);
@@ -154,7 +154,7 @@ System.err.println("Decoded: " + xml.asXML());
 					if(session.containsAttribute(EXIAlternativeBindingFilter.agreementSentFlag)){
 						// this is the last open (after receiving setupResponse)
 						((EXIFilter) session.getFilterChain().get(EXIFilter.filterName)).addCodec(session);
-						session.write(ByteBuffer.wrap(open(null).getBytes()));
+						session.write(IoBuffer.wrap(open(null).getBytes()));
 					}
 					else{
 						super.messageReceived(nextFilter, session, translateOpen(xml));
@@ -167,7 +167,7 @@ System.err.println("Decoded: " + xml.asXML());
 		    		if(setupResponse != null){
 		    			setupResponse = setupResponse.replaceAll("<setupResponse", "<exi:setupResponse")
 		    					.replaceAll("<schema", "<exi:schema").replaceAll("</setupResponse>", "</exi:setupResponse>");
-						session.write(ByteBuffer.wrap(setupResponse.getBytes()));
+						session.write(IoBuffer.wrap(setupResponse.getBytes()));
 		    		}
 		    		else	System.err.println("An error occurred while processing alternative negotiation.");
                 	return;

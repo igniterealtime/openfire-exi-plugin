@@ -1,16 +1,18 @@
 package cl.clayster.exi;
 
+import com.siemens.ct.exi.core.exceptions.EXIException;
+import com.siemens.ct.exi.core.grammars.Grammars;
+import com.siemens.ct.exi.grammars.GrammarFactory;
+
 import java.io.File;
 import java.io.IOException;
 
-import com.siemens.ct.exi.GrammarFactory;
-import com.siemens.ct.exi.exceptions.EXIException;
-import com.siemens.ct.exi.grammars.Grammars;
-
-public class SchemaIdResolver implements com.siemens.ct.exi.SchemaIdResolver {
+public class SchemaIdResolver implements com.siemens.ct.exi.core.SchemaIdResolver
+{
 	
 	@Override
-	public Grammars resolveSchemaId(String schemaId) throws EXIException {
+	public Grammars resolveSchemaId(String schemaId) throws EXIException
+    {
 		/*
 		if (schemaId == null || "".equals(schemaId)) {
 			return GrammarFactory.newInstance().createGrammars(EXIUtils.defaultCanonicalSchemaLocation);

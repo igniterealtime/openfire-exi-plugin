@@ -1,20 +1,19 @@
 package cl.clayster.exi;
 
-import java.io.File;
-import java.io.IOException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Iterator;
-
+import com.siemens.ct.exi.core.CodingMode;
+import com.siemens.ct.exi.core.FidelityOptions;
+import com.siemens.ct.exi.core.exceptions.UnsupportedOption;
+import com.siemens.ct.exi.core.helpers.DefaultEXIFactory;
 import org.dom4j.Attribute;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 
-import com.siemens.ct.exi.CodingMode;
-import com.siemens.ct.exi.FidelityOptions;
-import com.siemens.ct.exi.exceptions.UnsupportedOption;
-import com.siemens.ct.exi.helpers.DefaultEXIFactory;
+import java.io.File;
+import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Iterator;
 
 /**
  * Contains all relevant values to setup an EXI compression, in order to propose them to the server.

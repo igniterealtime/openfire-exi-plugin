@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin>
+    <!-- Main plugin class -->
+    <class>cl.clayster.exi.EXIPlugin</class>
+
+    <!-- Plugin meta-data -->
+    <name>${project.name}</name>
+    <description>${project.description}</description>
+    <author>Javier Placencio</author>
+
+    <version>${project.version}</version>
+    <date>2023-03-07</date>
+    <minServerVersion>4.7.0</minServerVersion>
+    <licenseType>gpl</licenseType>
+
+</plugin>

@@ -1,14 +1,15 @@
 package cl.clayster.exi;
 
+import org.apache.mina.core.buffer.IoBuffer;
+import org.apache.mina.core.filterchain.IoFilterAdapter;
+import org.apache.mina.core.session.IoSession;
+
 import java.io.FileWriter;
 import java.io.IOException;
 
-import org.apache.mina.common.ByteBuffer;
-import org.apache.mina.common.IoFilterAdapter;
-import org.apache.mina.common.IoSession;
 
-
-public class FilePrinterFilter extends IoFilterAdapter {
+public class FilePrinterFilter extends IoFilterAdapter
+{
 	
 	public static String filterName = "stats";
 	
@@ -21,8 +22,8 @@ public class FilePrinterFilter extends IoFilterAdapter {
 		if(message instanceof String){
 			addMsg(EXIUtils.bytesToHex(((String)message).getBytes()), session.hashCode());
 		}
-		else if (message instanceof ByteBuffer) {
-    		ByteBuffer byteBuffer = (ByteBuffer) message;
+		else if (message instanceof IoBuffer) {
+            IoBuffer byteBuffer = (IoBuffer) message;
     		// Keep current position in the buffer
             int currentPos = byteBuffer.position();
             

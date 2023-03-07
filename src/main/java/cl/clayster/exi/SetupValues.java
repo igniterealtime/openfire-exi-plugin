@@ -1,7 +1,7 @@
 package cl.clayster.exi;
 
-import com.siemens.ct.exi.CodingMode;
-import com.siemens.ct.exi.FidelityOptions;
+import com.siemens.ct.exi.core.CodingMode;
+import com.siemens.ct.exi.core.FidelityOptions;
 
 public class SetupValues {
 

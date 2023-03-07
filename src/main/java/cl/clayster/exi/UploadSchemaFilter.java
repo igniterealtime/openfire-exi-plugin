@@ -1,5 +1,14 @@
 package cl.clayster.exi;
 
+import com.siemens.ct.exi.core.exceptions.EXIException;
+import org.apache.mina.core.buffer.IoBuffer;
+import org.apache.mina.core.filterchain.IoFilterAdapter;
+import org.apache.mina.core.session.IoSession;
+import org.apache.xerces.impl.dv.util.Base64;
+import org.dom4j.DocumentException;
+import org.xml.sax.SAXException;
+
+import javax.xml.transform.TransformerException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -7,17 +16,6 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.security.NoSuchAlgorithmException;
 import java.util.Calendar;
-
-import javax.xml.transform.TransformerException;
-
-import org.apache.mina.common.ByteBuffer;
-import org.apache.mina.common.IoFilterAdapter;
-import org.apache.mina.common.IoSession;
-import org.apache.xerces.impl.dv.util.Base64;
-import org.dom4j.DocumentException;
-import org.xml.sax.SAXException;
-
-import com.siemens.ct.exi.exceptions.EXIException;
 
 /**
  * This class is used to process <uploadSchema> stanzas, which carry a schema that will be used for the compression that is being negotiated.
@@ -40,8 +38,8 @@ public class UploadSchemaFilter extends IoFilterAdapter {
 	@Override
     public void messageReceived(NextFilter nextFilter, IoSession session, Object message) throws Exception {
 		// Decode the bytebuffer and print it to the stdout
-	    if (message instanceof ByteBuffer) {
-	        ByteBuffer byteBuffer = (ByteBuffer) message;
+	    if (message instanceof IoBuffer) {
+            IoBuffer byteBuffer = (IoBuffer) message;
 	        // Decode buffer
 	        Charset encoder = Charset.forName("UTF-8");
 	        CharBuffer charBuffer = encoder.decode(byteBuffer.buf());
