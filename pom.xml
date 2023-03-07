@@ -55,6 +55,19 @@
             <groupId>com.siemens.ct.exi</groupId>
             <artifactId>exificient</artifactId>
             <version>1.0.4</version>
+            <exclusions>
+                <!-- Excluding xerces:xercesImpl:2.12.0, as it includes vulnerabilities. This dependency is replaced by an explicit dependency to a newer version of the library below. -->
+                <exclusion>
+                    <groupId>xerces</groupId>
+                    <artifactId>xercesImpl</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <!-- Replacement of the xerces:xercesImpl:2.12.0 dependency of com.siemens.ct.exi:exificient:1.0.4 that includes vulnerabilities. -->
+            <groupId>xerces</groupId>
+            <artifactId>xercesImpl</artifactId>
+            <version>2.12.2</version>
         </dependency>
     </dependencies>
 </project>
