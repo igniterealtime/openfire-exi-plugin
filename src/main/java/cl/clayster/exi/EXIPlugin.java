@@ -20,11 +20,15 @@ import org.jivesoftware.openfire.XMPPServer;
 import org.jivesoftware.openfire.container.Plugin;
 import org.jivesoftware.openfire.container.PluginManager;
 import org.jivesoftware.openfire.spi.ConnectionManagerImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 
 public class EXIPlugin implements Plugin{
+
+    private static final Logger Log = LoggerFactory.getLogger(EXIPlugin.class);
 
 	@Override
 	public void initializePlugin(PluginManager manager, File pluginDirectory) {
@@ -32,7 +36,7 @@ public class EXIPlugin implements Plugin{
 			EXIUtils.generateSchemasFile();
 			EXIUtils.generateDefaultCanonicalSchema();
 		} catch (IOException e) {
-			e.printStackTrace();
+            Log.warn("Exception while trying to initialize the Openfire EXI plugin.", e);
 			return;
 		}
         ConnectionManagerImpl connManager = (ConnectionManagerImpl) XMPPServer.getInstance().getConnectionManager();
@@ -42,7 +46,7 @@ public class EXIPlugin implements Plugin{
     	socketAcceptor.getFilterChain().addBefore("xmpp", EXIAlternativeBindingFilter.filterName, new EXIAlternativeBindingFilter());
     	EXIFilter exiFilter = new EXIFilter();
     	socketAcceptor.getFilterChain().addAfter("xmpp", EXIFilter.filterName, exiFilter);
-    	System.out.println("Starting EXI Plugin");
+        Log.info("Starting EXI Plugin");
 	}
 
 	@Override

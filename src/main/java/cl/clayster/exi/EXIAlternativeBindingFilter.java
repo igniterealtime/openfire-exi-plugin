@@ -25,6 +25,8 @@ import org.apache.mina.core.write.WriteRequest;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 import org.jivesoftware.util.JiveGlobals;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.xml.transform.TransformerException;
 import java.nio.charset.Charset;
@@ -37,7 +39,9 @@ import java.util.Iterator;
  *
  */
 public class EXIAlternativeBindingFilter extends IoFilterAdapter {
-	
+
+    private static final Logger Log = LoggerFactory.getLogger(EXIAlternativeBindingFilter.class);
+
 	public static final String filterName = "exiAltBindFilter";
 	static final String flag = "exiAltFlag";
 	private static final String quickSetupFlag = "exiAltQuickSetup";
@@ -53,7 +57,7 @@ public class EXIAlternativeBindingFilter extends IoFilterAdapter {
 			String msg = Charset.forName("UTF-8").decode(((IoBuffer) writeRequest.getMessage()).buf()).toString();
 			if(msg.contains("<stream:stream ")){
 				String open = open(EXIUtils.getAttributeValue(msg, "id"));
-System.out.println("ENCODING to send: " + open);
+                Log.trace("ENCODING to send: {}", open);
 				bb = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(open, true);
                 writeRequest.setMessage(bb);
 				super.filterWrite(nextFilter, session, writeRequest);
@@ -61,7 +65,7 @@ System.out.println("ENCODING to send: " + open);
 				if(msg.contains("<stream:features")){
 					msg = msg.substring(msg.indexOf("<stream:features"))
 							.replaceAll("<stream:features", "<stream:features xmlns:stream=\"http://etherx.jabber.org/streams\"");
-System.out.println("ENCODING to send: " + msg);
+                    Log.trace("ENCODING to send: {}", msg);
                     writeRequest.setMessage(((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(msg));
 					super.filterWrite(nextFilter, session, writeRequest);
 				}
@@ -78,7 +82,7 @@ System.out.println("ENCODING to send: " + msg);
 					msg = "<streamEnd xmlns:exi='http://jabber.org/protocol/compress/exi'/>";
 				}
 			}
-System.out.println("ENCODING to send: " + msg);
+            Log.trace("ENCODING to send: {}", msg);
 			bb = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(msg);
             writeRequest.setMessage(bb);
 			super.filterWrite(nextFilter, session, writeRequest);
@@ -122,17 +126,15 @@ System.out.println("ENCODING to send: " + msg);
 			            	session.setAttribute(EXIUtils.EXI_PROCESSOR, ep);
 			            	session.setAttribute(EXIUtils.EXI_CONFIG, exiConfig);
 			            	session.setAttribute(EXIAlternativeBindingFilter.quickSetupFlag, true);
-System.out.println("quick setup: " + exiConfig);
+                            Log.debug("quick setup: {}", exiConfig);
 		            	}
 		            	else{
 		            		
 		            	}
-					} catch (EXIException e){
-						e.printStackTrace();
-					} catch (TransformerException e){
-						e.printStackTrace();
+					} catch (EXIException | TransformerException e){
+                        Log.warn("Exception while trying to process received message.", e);
 					}
-				}
+                }
 				
 				if(session.getAttribute(EXIAlternativeBindingFilter.quickSetupFlag).equals(false)){
 					EXISetupConfiguration exiConfig = new EXISetupConfiguration();
@@ -140,14 +142,14 @@ System.out.println("quick setup: " + exiConfig);
 						exiConfig = (EXISetupConfiguration) session.getAttribute(EXIUtils.EXI_CONFIG);
 					}
 					session.setAttribute(EXIUtils.EXI_PROCESSOR, new EXIProcessor(exiConfig));
-System.err.println("new EXIProcessor: " + session.getAttribute(EXIUtils.EXI_PROCESSOR));
-System.err.println("with: " + exiConfig);
+                    Log.debug("new EXIProcessor: {}", session.getAttribute(EXIUtils.EXI_PROCESSOR));
+                    Log.debug("with: {}", exiConfig);
 				}
             }
 			if(session.containsAttribute(EXIAlternativeBindingFilter.flag)){
 				// Decode EXI bytes
-System.err.println("Decoding: " + EXIUtils.bytesToHex(exiBytes));
-System.err.println("\tusing EXISetupConfigurations: " + (session.containsAttribute(EXIUtils.EXI_CONFIG) ? (EXISetupConfiguration) session.getAttribute(EXIUtils.EXI_CONFIG) : new EXISetupConfiguration()));
+                Log.trace("Decoding: {}", EXIUtils.bytesToHex(exiBytes));
+                Log.trace("\tusing EXISetupConfigurations: {}", (session.containsAttribute(EXIUtils.EXI_CONFIG) ? (EXISetupConfiguration) session.getAttribute(EXIUtils.EXI_CONFIG) : new EXISetupConfiguration()));
 				try{
 					msg = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).decodeByteArray(exiBytes);
 				} catch (TransformerException e){
@@ -164,7 +166,7 @@ System.err.println("\tusing EXISetupConfigurations: " + (session.containsAttribu
 				session.setAttribute("exiBytes", null);	// old bytes have been used with the last message
 				
 				Element xml = DocumentHelper.parseText(msg).getRootElement();
-System.err.println("Decoded: " + xml.asXML());
+                Log.trace("Decoded: {}", xml.asXML());
 				if(xml.getName().equals("open")){
 					if(session.containsAttribute(EXIAlternativeBindingFilter.agreementSentFlag)){
 						// this is the last open (after receiving setupResponse)
@@ -184,7 +186,9 @@ System.err.println("Decoded: " + xml.asXML());
 		    					.replaceAll("<schema", "<exi:schema").replaceAll("</setupResponse>", "</exi:setupResponse>");
 						session.write(IoBuffer.wrap(setupResponse.getBytes()));
 		    		}
-		    		else	System.err.println("An error occurred while processing alternative negotiation.");
+                    else {
+                        Log.warn("An error occurred while processing alternative negotiation.");
+                    }
                 	return;
                 }
 				else if(xml.getName().equals("presence")){

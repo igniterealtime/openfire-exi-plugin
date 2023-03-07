@@ -27,6 +27,8 @@ import com.siemens.ct.exi.main.api.sax.EXIResult;
 import com.siemens.ct.exi.main.api.sax.EXISource;
 import com.siemens.ct.exi.main.api.sax.SAXDecoder;
 import org.apache.mina.core.buffer.IoBuffer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.*;
 import org.xml.sax.helpers.XMLReaderFactory;
 
@@ -36,7 +38,9 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.*;
 
 public class EXIProcessor {
-	
+
+    private static final Logger Log = LoggerFactory.getLogger(EXIProcessor.class);
+
 	protected EXIFactory exiFactory;
 	protected EXIResult exiResult;
 	protected SAXSource exiSource;
@@ -69,14 +73,11 @@ public class EXIProcessor {
 			exiSource = new EXISource(exiFactory);
 	        exiReader = exiSource.getXMLReader();
 		} catch (IOException e){
-			e.printStackTrace();
-			throw new EXIException("Error while creating Grammars.");
+			throw new EXIException("Error while creating Grammars.", e);
 		} catch (TransformerConfigurationException e) {
-			e.printStackTrace();
-			throw new EXIException("Error while creating Transformer.");
+			throw new EXIException("Error while creating Transformer.", e);
 		} catch (SAXException e) {
-			e.printStackTrace();
-			throw new EXIException("Error while creating XML reader.");
+			throw new EXIException("Error while creating XML reader.", e);
 		}
 	}
 	
@@ -124,12 +125,10 @@ public class EXIProcessor {
 		SAXDecoder saxDecoder = new SAXDecoder(factory);
 		try {
 			saxDecoder.setFeature(Constants.W3C_EXI_FEATURE_BODY_ONLY, Boolean.TRUE);
-		} catch (SAXNotRecognizedException e) {
-			e.printStackTrace();
-		} catch (SAXNotSupportedException e) {
-			e.printStackTrace();
+		} catch (SAXNotRecognizedException | SAXNotSupportedException e) {
+            Log.warn("Exception while trying to decode EXI body using no schema files.", e);
 		}
-		exiSource.setXMLReader(saxDecoder);
+        exiSource.setXMLReader(saxDecoder);
 
 		ByteArrayOutputStream xmlDecoded = new ByteArrayOutputStream();
 		transformer.transform(exiSource, new StreamResult(xmlDecoded));

@@ -29,6 +29,8 @@ import org.apache.xerces.impl.dv.util.Base64;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
 import javax.xml.transform.TransformerException;
@@ -46,7 +48,9 @@ import java.util.Iterator;
  * @author Javier Placencio
  */
 public class EXIFilter extends IoFilterAdapter {
-	
+
+    private static final Logger Log = LoggerFactory.getLogger(EXIFilter.class);
+
 	public static final String filterName = "exiFilter";
 	private String setupReceived = "setupReceived";
 
@@ -89,7 +93,7 @@ public class EXIFilter extends IoFilterAdapter {
 				session.setAttribute(setupReceived, true);
 				String setupResponse = setupResponse(xml, session);
 	    		if(setupResponse == null){
-	    			System.err.println("An error occurred while processing the negotiation.");
+                    Log.warn("An error occurred while processing the negotiation.");
 	    		}else{
                     IoBuffer bb = IoBuffer.wrap(setupResponse.getBytes());
 	    	        session.write(bb);
@@ -252,7 +256,7 @@ public class EXIFilter extends IoFilterAdapter {
 						}
 					}
 				} catch (UnsupportedOption e) {
-					e.printStackTrace();
+                    Log.warn("Exception while trying to process a 'setup' from a client.", e);
 				}
 				aux = setup.attributeValue(SetupValues.VALUE_MAX_LENGTH);
 				if(aux != null){
@@ -278,17 +282,11 @@ public class EXIFilter extends IoFilterAdapter {
 	        setup.setName("setupResponse");
 	        
 	        setupResponse = setup.asXML();
-		} catch (FileNotFoundException e1) {
-			e1.printStackTrace();
-			return null;
-		} catch (IOException e) {
-			e.printStackTrace();
-			return null;
-		} catch (DocumentException e) {
-			e.printStackTrace();
+		} catch (DocumentException | IOException e) {
+            Log.warn("Exception while trying to process a 'setup' from a client.", e);
 			return null;
 		}
-		return setupResponse;
+        return setupResponse;
     }
 	
 	
@@ -325,7 +323,7 @@ public class EXIFilter extends IoFilterAdapter {
 		try {
 			md = MessageDigest.getInstance("MD5");
 		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
+            Log.warn("Exception while trying to create canonical schema from a 'setup' received from a client.", e);
 			return null;
 		}
 		String schemaId = EXIUtils.bytesToHex(md.digest(content.getBytes()));
@@ -352,7 +350,7 @@ public class EXIFilter extends IoFilterAdapter {
 				EXISetupConfiguration exiConfig = (EXISetupConfiguration) session.getAttribute(EXIUtils.EXI_CONFIG);
 				exiProcessor = new EXIProcessor(exiConfig);
 			} catch (EXIException e) {
-				e.printStackTrace();
+                Log.warn("Exception while trying to create an EXI processor.", e);
 				return null;
 			}
         }

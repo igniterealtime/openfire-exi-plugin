@@ -51,7 +51,7 @@ public class FilePrinterFilter extends IoFilterAdapter
 	}
 	
 	private void addMsg(String msg, int id) throws IOException {
-		//System.out.println("writing for " + id + ": " + msg);
+		//Log.debug("writing for {}: {}", id, msg);
 		FileWriter f = new FileWriter("output" + id + ".txt", true);
 		f.write(msg + "\n");
 		f.close();

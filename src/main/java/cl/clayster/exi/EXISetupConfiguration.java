@@ -23,6 +23,8 @@ import org.dom4j.Attribute;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,7 +38,9 @@ import java.util.Iterator;
  *
  */
 public class EXISetupConfiguration extends DefaultEXIFactory{
-	
+
+    private static final Logger Log = LoggerFactory.getLogger(EXISetupConfiguration.class);
+
 	protected String configurationId;
 	protected String schemaId;
 	protected boolean sessionWideBuffers = false;
@@ -65,7 +69,7 @@ public class EXISetupConfiguration extends DefaultEXIFactory{
 		try {
 			getFidelityOptions().setFidelity(FidelityOptions.FEATURE_PREFIX, true);
 		} catch (UnsupportedOption e) {
-			e.printStackTrace();
+            Log.warn("Exception while trying to set default values.", e);
 		}
 		
 		setValueMaxLength(64);
@@ -200,7 +204,7 @@ public class EXISetupConfiguration extends DefaultEXIFactory{
 			String configId = EXIUtils.bytesToHex(md.digest(content.getBytes()));
 			setConfigurationId(configId);
 		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
+            Log.warn("Exception while trying to save configuration.", e);
 		}		
 		
 		String fileName = EXIUtils.exiFolder + configurationId + ".xml";
@@ -212,7 +216,7 @@ public class EXISetupConfiguration extends DefaultEXIFactory{
 				return true;
 			}
 			else{
-				System.err.println("Error while trying to save the file. Configurations were not saved.");
+				Log.warn("Error while trying to save the file. Configurations were not saved.");
 				return false;
 			} 
 		}
@@ -289,7 +293,7 @@ public class EXISetupConfiguration extends DefaultEXIFactory{
 	        			exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_SC, true);
 	        		}
 				} catch (UnsupportedOption e) {
-					e.printStackTrace();
+                    Log.warn("Exception while trying to parse quick config ID '{}'", configId, e);
 				}
         }
 		return exiConfig;

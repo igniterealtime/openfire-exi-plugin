@@ -20,6 +20,8 @@ import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 import org.jivesoftware.util.JiveGlobals;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.*;
@@ -38,6 +40,8 @@ import java.util.List;
  *
  */
 public class EXIUtils {
+
+    private static final Logger Log = LoggerFactory.getLogger(EXIUtils.class);
 
 	final static String schemasFolder = JiveGlobals.getHomeDirectory() + "/plugins/exi/classes/";
 	final static String schemasFileLocation = schemasFolder + "schemas.xml";
@@ -290,7 +294,7 @@ public class EXIUtils {
             stanzasWriter.write("\n</schemas>");
 			stanzasWriter.close();
 		}catch (NoSuchAlgorithmException e){
-			e.printStackTrace();
+            Log.warn("Exception while trying to generate schema files.", e);
 		}
 	}
 	
@@ -304,8 +308,8 @@ public class EXIUtils {
 		Element setup;
 		try {
 			setup = DocumentHelper.parseText(EXIUtils.readFile(EXIUtils.schemasFileLocation)).getRootElement();
-		} catch (DocumentException e1) {
-			e1.printStackTrace();
+		} catch (DocumentException e) {
+            Log.warn("Exception while trying to generate default canonical schema.", e);
 			return;
 		}
         StringBuilder sb = new StringBuilder();

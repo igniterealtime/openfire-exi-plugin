@@ -22,6 +22,8 @@ import org.apache.mina.core.session.IoSession;
 import org.apache.mina.core.write.WriteRequest;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.xml.transform.TransformerException;
 import java.io.BufferedInputStream;
@@ -36,7 +38,9 @@ import java.nio.charset.Charset;
  *
  */
 public class EXICodecFilter extends IoFilterAdapter {
-	
+
+    private static final Logger Log = LoggerFactory.getLogger(EXICodecFilter.class);
+
 	public EXICodecFilter() {}
 	
 	@Override
@@ -44,7 +48,7 @@ public class EXICodecFilter extends IoFilterAdapter {
 		String msg = "";
 		if(writeRequest.getMessage() instanceof IoBuffer){
 			msg = Charset.forName("UTF-8").decode(((IoBuffer) writeRequest.getMessage()).buf()).toString();
-System.out.println("ENCODING WITH CODECFILTER(" + session.hashCode() + "): " + msg);
+            Log.trace("ENCODING WITH CODECFILTER({}): {}", session.hashCode(), msg);
 			if(msg.startsWith("</stream:stream>")){
 				if(session.containsAttribute(EXIAlternativeBindingFilter.flag)){
 					msg = "<streamEnd xmlns:exi='http://jabber.org/protocol/compress/exi'/>";
@@ -63,7 +67,7 @@ System.out.println("ENCODING WITH CODECFILTER(" + session.hashCode() + "): " + m
 				super.filterWrite(nextFilter, session, writeRequest);
 				return;
 			} catch (EXIException e){
-				e.printStackTrace();
+                Log.warn("Exception while trying to filter a write.", e);
 			}
 		}
 		super.filterWrite(nextFilter, session, writeRequest);
@@ -85,7 +89,7 @@ System.out.println("ENCODING WITH CODECFILTER(" + session.hashCode() + "): " + m
 				exiBytes = dest;
 			}
 			
-System.out.println("DECODING(" + session.hashCode() + "): " + EXIUtils.bytesToHex(exiBytes));
+            Log.trace("DECODING({}): {}", session.hashCode(), EXIUtils.bytesToHex(exiBytes));
 			if(!EXIProcessor.isEXI(exiBytes[0])){
 				super.messageReceived(nextFilter, session, message);
 			}
@@ -98,7 +102,7 @@ System.out.println("DECODING(" + session.hashCode() + "): " + EXIUtils.bytesToHe
 						String xmlStr = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).decode(bis);
 						Element xml = DocumentHelper.parseText(xmlStr).getRootElement();
 						session.setAttribute("exiBytes", null); // old bytes have been used with the last message
-	System.out.println("DECODED(" + session.hashCode() + "): " + xml.asXML());
+                        Log.trace("DECODED({}): {}", session.hashCode(), xml.asXML());
 						if("open".equals(xml.getName())){
 							String open = EXIAlternativeBindingFilter.translateOpen(xml);
 							session.write(IoBuffer.wrap(EXIAlternativeBindingFilter.open(open).getBytes()));
@@ -113,7 +117,7 @@ System.out.println("DECODING(" + session.hashCode() + "): " + EXIUtils.bytesToHe
 						bis.reset();
 						byte[] restingBytes = new byte[bis.available()];
 						bis.read(restingBytes);
-System.out.println("Saving: " + EXIUtils.bytesToHex(restingBytes));
+                        Log.trace("Saving: {}", EXIUtils.bytesToHex(restingBytes));
 						session.setAttribute("exiBytes", restingBytes);
 						super.messageReceived(nextFilter, session, IoBuffer.wrap("".getBytes()));
 						return;

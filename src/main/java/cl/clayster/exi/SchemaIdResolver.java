@@ -18,13 +18,16 @@ package cl.clayster.exi;
 import com.siemens.ct.exi.core.exceptions.EXIException;
 import com.siemens.ct.exi.core.grammars.Grammars;
 import com.siemens.ct.exi.grammars.GrammarFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 
 public class SchemaIdResolver implements com.siemens.ct.exi.core.SchemaIdResolver
 {
-	
+	private static final Logger Log = LoggerFactory.getLogger(SchemaIdResolver.class);
+
 	@Override
 	public Grammars resolveSchemaId(String schemaId) throws EXIException
     {
@@ -40,7 +43,7 @@ public class SchemaIdResolver implements com.siemens.ct.exi.core.SchemaIdResolve
 				g = GrammarFactory.newInstance().createGrammars(f.getAbsolutePath(), new SchemaResolver());
 				g.setSchemaId(schemaId);
 			} catch (IOException e) {
-				e.printStackTrace();
+                Log.warn("Exception while trying to resolve schema ID '{}'.", schemaId, e);
 			}
 		}
 		else{
