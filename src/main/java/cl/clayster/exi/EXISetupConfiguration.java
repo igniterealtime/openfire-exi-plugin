@@ -46,9 +46,9 @@ public class EXISetupConfiguration extends DefaultEXIFactory
     protected boolean sessionWideBuffers = false;
 
     /**
-     * Constructs a new EXISetupConfigurations and initializates it with Default Values.
+     * Constructs a new EXISetupConfigurations and initializes it with Default Values.
      *
-     * @param quickSetup indicates whether or not to try quick EXI configuration setup first
+     * @param quickSetup indicates whether to try quick EXI configuration setup first
      */
     public EXISetupConfiguration(boolean quickSetup)
     {
@@ -56,7 +56,7 @@ public class EXISetupConfiguration extends DefaultEXIFactory
     }
 
     /**
-     * Constructs a new EXISetupConfigurations and initializates it with Default Values.
+     * Constructs a new EXISetupConfigurations and initializes it with Default Values.
      */
     public EXISetupConfiguration()
     {
@@ -96,21 +96,19 @@ public class EXISetupConfiguration extends DefaultEXIFactory
     public int getAlignmentCode()
     {
         CodingMode cm = getCodingMode();
-        int alignment = (cm.equals(CodingMode.BIT_PACKED)) ? 0 :
+        return (cm.equals(CodingMode.BIT_PACKED)) ? 0 :
             (cm.equals(CodingMode.BYTE_PACKED)) ? 1 :
                 (cm.equals(CodingMode.PRE_COMPRESSION)) ? 2 :
                     (cm.equals(CodingMode.COMPRESSION)) ? 3 : 0;
-        return alignment;
     }
 
     public String getAlignmentString()
     {
         CodingMode cm = getCodingMode();
-        String alignment = (cm.equals(CodingMode.BIT_PACKED)) ? "bit-packed" :
+        return (cm.equals(CodingMode.BIT_PACKED)) ? "bit-packed" :
             (cm.equals(CodingMode.BYTE_PACKED)) ? "byte-packed" :
                 (cm.equals(CodingMode.PRE_COMPRESSION)) ? "pre-compression" :
                     (cm.equals(CodingMode.COMPRESSION)) ? "compression" : "bit-packed";
-        return alignment;
     }
 
     public void setSessionWideBuffers(boolean sessionWideBuffers)
@@ -163,23 +161,23 @@ public class EXISetupConfiguration extends DefaultEXIFactory
                 sb.append(" strict='true'");
             } else {
                 if (fo.isFidelityEnabled(FidelityOptions.FEATURE_COMMENT)) {
-                    sb.append(" " + SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_COMMENT) + "='true'");
+                    sb.append(" ").append(SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_COMMENT)).append("='true'");
                 }
                 if (fo.isFidelityEnabled(FidelityOptions.FEATURE_DTD)) {
-                    sb.append(" " + SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_DTD) + "='true'");
+                    sb.append(" ").append(SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_DTD)).append("='true'");
                 }
                 if (fo.isFidelityEnabled(FidelityOptions.FEATURE_LEXICAL_VALUE)) {
-                    sb.append(" " + SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_LEXICAL_VALUE) + "='true'");
+                    sb.append(" ").append(SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_LEXICAL_VALUE)).append("='true'");
                 }
                 if (fo.isFidelityEnabled(FidelityOptions.FEATURE_PI)) {
-                    sb.append(" " + SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_PI) + "='true'");
+                    sb.append(" ").append(SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_PI)).append("='true'");
                 }
                 if (fo.isFidelityEnabled(FidelityOptions.FEATURE_PREFIX)) {
-                    sb.append(" " + SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_PREFIX) + "='true'");
+                    sb.append(" ").append(SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_PREFIX)).append("='true'");
                 }
                 if (fo.isFidelityEnabled(FidelityOptions.FEATURE_SC) &&
                     !(getCodingMode().equals(CodingMode.PRE_COMPRESSION) || getCodingMode().equals(CodingMode.COMPRESSION))) {
-                    sb.append(" " + SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_SC) + "='true'");
+                    sb.append(" ").append(SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_SC)).append("='true'");
                 }
             }
         }
@@ -202,10 +200,9 @@ public class EXISetupConfiguration extends DefaultEXIFactory
     }
 
     /**
-     * Saves this EXI configurations to a file, unless the same configurations have been saved already
+     * Saves this EXI configuration to a file, unless the same configuration has been saved already
      *
-     * @return true if this configurations are saved, false otherwise
-     * @throws IOException
+     * @return true if this configuration is saved, false otherwise
      */
     public boolean saveConfiguration() throws IOException
     {
@@ -237,7 +234,6 @@ public class EXISetupConfiguration extends DefaultEXIFactory
      *
      * @param configId the configuration ID to look for
      * @return an EXISetupConfiguration instance if the configuration exists. <i>null</i> otherwise
-     * @throws DocumentException
      */
     public static EXISetupConfiguration parseQuickConfigId(String configId) throws DocumentException
     {
@@ -251,8 +247,8 @@ public class EXISetupConfiguration extends DefaultEXIFactory
         EXISetupConfiguration exiConfig = new EXISetupConfiguration();
         exiConfig.setConfigurationId(configId);
         // iterate through attributes of root
-        for (@SuppressWarnings("unchecked") Iterator<Attribute> i = configElement.attributeIterator(); i.hasNext(); ) {
-            Attribute att = (Attribute) i.next();
+        for (Iterator<Attribute> i = configElement.attributeIterator(); i.hasNext(); ) {
+            Attribute att = i.next();
             if (att.getName().equals("schemaId")) {
                 exiConfig.setSchemaId(att.getValue());
                 if (!new File(exiConfig.getCanonicalSchemaLocation()).exists()) {
@@ -265,11 +261,11 @@ public class EXISetupConfiguration extends DefaultEXIFactory
                     exiConfig.setCodingMode(CodingMode.COMPRESSION);
                 }
             } else if (att.getName().equals("blockSize")) {
-                exiConfig.setBlockSize(Integer.valueOf(att.getValue()));
+                exiConfig.setBlockSize(Integer.parseInt(att.getValue()));
             } else if (att.getName().equals("valueMaxLength")) {
-                exiConfig.setValueMaxLength(Integer.valueOf(att.getValue()));
+                exiConfig.setValueMaxLength(Integer.parseInt(att.getValue()));
             } else if (att.getName().equals("valuePartitionCapacity")) {
-                exiConfig.setValuePartitionCapacity(Integer.valueOf(att.getValue()));
+                exiConfig.setValuePartitionCapacity(Integer.parseInt(att.getValue()));
             } else if (att.getName().equals("sessionWideBuffers")) {
                 exiConfig.setSessionWideBuffers(true);
             } else if (att.getName().equals("strict")) {

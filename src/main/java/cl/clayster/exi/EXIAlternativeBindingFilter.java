@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.xml.transform.TransformerException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 
 /**
@@ -57,7 +57,7 @@ public class EXIAlternativeBindingFilter extends IoFilterAdapter
     {
         if (writeRequest.getMessage() instanceof IoBuffer) {
             IoBuffer bb = (IoBuffer) writeRequest.getMessage();
-            String msg = Charset.forName("UTF-8").decode(((IoBuffer) writeRequest.getMessage()).buf()).toString();
+            String msg = StandardCharsets.UTF_8.decode(((IoBuffer) writeRequest.getMessage()).buf()).toString();
             if (msg.contains("<stream:stream ")) {
                 String open = open(EXIUtils.getAttributeValue(msg, "id"));
                 Log.trace("ENCODING to send: {}", open);
@@ -148,7 +148,7 @@ public class EXIAlternativeBindingFilter extends IoFilterAdapter
             if (session.containsAttribute(EXIAlternativeBindingFilter.flag)) {
                 // Decode EXI bytes
                 Log.trace("Decoding: {}", EXIUtils.bytesToHex(exiBytes));
-                Log.trace("\tusing EXISetupConfigurations: {}", (session.containsAttribute(EXIUtils.EXI_CONFIG) ? (EXISetupConfiguration) session.getAttribute(EXIUtils.EXI_CONFIG) : new EXISetupConfiguration()));
+                Log.trace("\tusing EXISetupConfigurations: {}", (session.containsAttribute(EXIUtils.EXI_CONFIG) ? session.getAttribute(EXIUtils.EXI_CONFIG) : new EXISetupConfiguration()));
                 try {
                     msg = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).decodeByteArray(exiBytes);
                 } catch (TransformerException e) {
@@ -214,7 +214,7 @@ public class EXIAlternativeBindingFilter extends IoFilterAdapter
         //sb.append(" xmlns=\"jabber:client xmlns:stream=\"http://etherx.jabber.org/streams\"");
 
         Element aux;
-        for (@SuppressWarnings("unchecked") Iterator<Element> j = open.elementIterator("xmlns"); j.hasNext(); ) {
+        for (Iterator<Element> j = open.elementIterator("xmlns"); j.hasNext(); ) {
             aux = j.next();
             sb.append(" xmlns");
             String prefix = aux.attributeValue("prefix");

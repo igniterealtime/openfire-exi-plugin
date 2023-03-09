@@ -24,11 +24,13 @@ import org.dom4j.DocumentException;
 import org.xml.sax.SAXException;
 
 import javax.xml.transform.TransformerException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.util.Calendar;
 
@@ -58,14 +60,14 @@ public class UploadSchemaFilter extends IoFilterAdapter
         if (message instanceof IoBuffer) {
             IoBuffer byteBuffer = (IoBuffer) message;
             // Decode buffer
-            Charset encoder = Charset.forName("UTF-8");
+            Charset encoder = StandardCharsets.UTF_8;
             CharBuffer charBuffer = encoder.decode(byteBuffer.buf());
             byte[] bba = byteBuffer.array();
 
             String cont = (String) session.getAttribute("cont");
             if (cont == null) cont = "";
             session.setAttribute("cont", "");
-            String msg = cont + charBuffer.toString();
+            String msg = cont + charBuffer;
 
             byte[] baCont = (byte[]) session.getAttribute("baCont");
             if (baCont == null) baCont = new byte[]{};
@@ -158,7 +160,7 @@ public class UploadSchemaFilter extends IoFilterAdapter
         throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException
     {
         String filePath = EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
-        OutputStream out = new FileOutputStream(filePath);
+        OutputStream out = Files.newOutputStream(Paths.get(filePath));
 
         content = content.substring(content.indexOf('>') + 1, content.indexOf("</"));
         byte[] outputBytes = content.getBytes();

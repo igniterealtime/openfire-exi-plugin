@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 import javax.xml.transform.TransformerException;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Decodes EXI stanzas from a specific IoSession, it stores the JID address of the respective user, allowing to easily relate both sessions
@@ -49,7 +49,7 @@ public class EXICodecFilter extends IoFilterAdapter
     {
         String msg = "";
         if (writeRequest.getMessage() instanceof IoBuffer) {
-            msg = Charset.forName("UTF-8").decode(((IoBuffer) writeRequest.getMessage()).buf()).toString();
+            msg = StandardCharsets.UTF_8.decode(((IoBuffer) writeRequest.getMessage()).buf()).toString();
             Log.trace("ENCODING WITH CODECFILTER({}): {}", session.hashCode(), msg);
             if (msg.startsWith("</stream:stream>")) {
                 if (session.containsAttribute(EXIAlternativeBindingFilter.flag)) {

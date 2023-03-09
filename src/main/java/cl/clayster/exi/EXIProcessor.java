@@ -51,9 +51,7 @@ public class EXIProcessor
     /**
      * Constructs an EXI Processor using <b>xsdLocation</b> as the Canonical Schema and the respective parameters in exiConfig for its configuration.
      *
-     * @param xsdLocation location of the Canonical schema file
-     * @param exiConfig   EXISetupConfiguration instance with the necessary EXI options. Default options are used when null
-     * @throws EXIException
+     * @param exiConfig EXISetupConfiguration instance with the necessary EXI options. Default options are used when null
      */
     public EXIProcessor(EXISetupConfiguration exiConfig) throws EXIException
     {
@@ -94,9 +92,6 @@ public class EXIProcessor
      *
      * @param xml the String to be encoded
      * @return a byte array containing the EXI Body
-     * @throws IOException
-     * @throws EXIException
-     * @throws SAXException
      */
     public static byte[] encodeEXIBody(String xml) throws EXIException, IOException, SAXException
     {
@@ -111,10 +106,6 @@ public class EXIProcessor
      *
      * @param exi the EXI stanza to be decoded
      * @return a String containing the decoded XML
-     * @throws IOException
-     * @throws EXIException
-     * @throws UnsupportedEncodingException
-     * @throws SAXException
      */
     public static String decodeExiBodySchemaless(byte[] exi) throws TransformerException, EXIException, UnsupportedEncodingException
     {
@@ -146,9 +137,6 @@ public class EXIProcessor
      * @param xml    the String to be encoded
      * @param cookie if the encoding should include EXI Cookie or not
      * @return a byte array containing the encoded bytes
-     * @throws IOException
-     * @throws EXIException
-     * @throws SAXException
      */
     public static byte[] encodeSchemaless(String xml, boolean cookie) throws IOException, EXIException, SAXException
     {
@@ -177,9 +165,6 @@ public class EXIProcessor
      * @param eo  Encoding Options (if null, default will be used)
      * @param fo  Fidelity Options (if null, default will be used)
      * @return a byte array containing the encoded bytes
-     * @throws IOException
-     * @throws EXIException
-     * @throws SAXException
      */
     public static byte[] encodeSchemaless(String xml, EncodingOptions eo, FidelityOptions fo) throws IOException, EXIException, SAXException
     {
@@ -212,10 +197,6 @@ public class EXIProcessor
      *
      * @param exi the EXI stanza to be decoded
      * @return a String containing the decoded XML
-     * @throws IOException
-     * @throws EXIException
-     * @throws UnsupportedEncodingException
-     * @throws SAXException
      */
     public static String decodeSchemaless(byte[] exi) throws TransformerException, EXIException, UnsupportedEncodingException
     {
@@ -251,11 +232,11 @@ public class EXIProcessor
     public static boolean hasEXICookie(byte[] bba)
     {
         byte[] ba = new byte[4];
-        System.arraycopy(bba, 0, ba, 0, bba.length >= 4 ? 4 : bba.length);
+        System.arraycopy(bba, 0, ba, 0, Math.min(bba.length, 4));
         return "$EXI".equals(new String(ba));
     }
 
-    public IoBuffer encodeByteBuffer(String xml, boolean cookie) throws IOException, EXIException, SAXException, TransformerException
+    public IoBuffer encodeByteBuffer(String xml, boolean cookie) throws IOException, EXIException, SAXException
     {
         // encoding
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -282,7 +263,7 @@ public class EXIProcessor
     /**
      * <p>Decodes a String from EXI to XML</p>
      *
-     * @param in <code>InputStream</code> to read from.
+     * @param exiBytes The byte array to decode.
      * @return a character array containing the XML characters
      * @throws EXIException if it is a not well formed EXI document
      */
@@ -301,7 +282,7 @@ public class EXIProcessor
     /**
      * <p>Decodes a String from EXI to XML</p>
      *
-     * @param in <code>InputStream</code> to read from.
+     * @param exiIS <code>InputStream</code> to read from.
      * @return a character array containing the XML characters
      * @throws EXIException if it is a not well formed EXI document
      */
@@ -319,7 +300,7 @@ public class EXIProcessor
     /**
      * <p>Decodes a String from EXI to XML</p>
      *
-     * @param in <code>InputStream</code> to read from.
+     * @param exiStream <code>InputStream</code> to read from.
      * @return a character array containing the XML characters
      * @throws EXIException if it is a not well formed EXI document
      */

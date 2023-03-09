@@ -105,8 +105,6 @@ public class EXIUtils
                 out.close();
                 return true;
             }
-        } catch (FileNotFoundException e) {
-            return false;
         } catch (IOException e) {
             return false;
         }
@@ -116,7 +114,7 @@ public class EXIUtils
     public static String getAttributeValue(String text, String attribute)
     {
         attribute = " " + attribute;
-        if (text.indexOf(attribute) == -1) {
+        if (!text.contains(attribute)) {
             return null;
         }
         text = text.substring(text.indexOf(attribute) + attribute.length());    // starting after targetNamespace
@@ -159,7 +157,7 @@ public class EXIUtils
                     String inputLine;
                     BufferedReader in = new BufferedReader(new InputStreamReader(uConn.getInputStream()));
                     while ((inputLine = in.readLine()) != null) {
-                        sb.append(inputLine + '\n');
+                        sb.append(inputLine).append('\n');
                     }
                     in.close();
                     DocumentHelper.parseText(sb.toString());
@@ -228,10 +226,7 @@ public class EXIUtils
     /**
      * Looks for all schema files (*.xsd) in the given folder and creates two new files:
      * a canonical schema file which imports all existing schema files;
-     * and an xml file called schema.xml which contains each schema namespace, file size in bytes and its md5Hash code
-     *
-     * @throws NoSuchAlgorithmException
-     * @throws IOException
+     * and an XML file called schema.xml which contains each schema namespace, file size in bytes and its md5Hash code
      */
     static void generateSchemasFile() throws IOException
     {
@@ -255,8 +250,8 @@ public class EXIUtils
             int r;
 
             // variables to write the stanzas in the right order (namepsace alfabethical order)
-            List<String> namespaces = new ArrayList<String>();
-            HashMap<String, String> schemasStanzas = new HashMap<String, String>();
+            List<String> namespaces = new ArrayList<>();
+            HashMap<String, String> schemasStanzas = new HashMap<>();
             int n = 0;
 
             for (File listOfFile : listOfFiles) {
@@ -284,8 +279,7 @@ public class EXIUtils
                     n = 0;
                     while (n < namespaces.size() &&
                         namespaces.get(n) != null &&
-                        namespaces.get(n)
-                            .compareToIgnoreCase(namespace) <= 0) {
+                        namespaces.get(n).compareToIgnoreCase(namespace) <= 0) {
                         n++;
                     }
                     namespaces.add(n, namespace);
@@ -310,8 +304,6 @@ public class EXIUtils
 
     /**
      * Generates XEP-0322's default canonical schema
-     *
-     * @throws IOException
      */
     static void generateDefaultCanonicalSchema() throws IOException
     {
@@ -334,7 +326,7 @@ public class EXIUtils
             + "\n\telementFormDefault='qualified'>");
 
         Element schema;
-        for (@SuppressWarnings("unchecked") Iterator<Element> i = setup.elementIterator("schema"); i.hasNext(); ) {
+        for (Iterator<Element> i = setup.elementIterator("schema"); i.hasNext(); ) {
             schema = i.next();
             String ns = schema.attributeValue("ns");
             if (ns.equalsIgnoreCase(schemasNeeded[0])) {
@@ -350,19 +342,17 @@ public class EXIUtils
             }
         }
         if (schemasFound[0] && schemasFound[1]) {
-            sb.append("\n\t<xs:import namespace='" + schemasNeeded[0] + "'/>");
-            sb.append("\n\t<xs:import namespace='" + schemasNeeded[1] + "'/>");
+            sb.append("\n\t<xs:import namespace='").append(schemasNeeded[0]).append("'/>");
+            sb.append("\n\t<xs:import namespace='").append(schemasNeeded[1]).append("'/>");
         } else {
             throw new IOException("Missing schema for default canonical schema: " + (schemasFound[0] ? schemasNeeded[0] : schemasNeeded[1]));
         }
         sb.append("\n</xs:schema>");
 
         String content = sb.toString();
-        String fileName = EXIUtils.defaultCanonicalSchemaLocation;
 
-        BufferedWriter newCanonicalSchemaWriter = new BufferedWriter(new FileWriter(fileName));
+        BufferedWriter newCanonicalSchemaWriter = new BufferedWriter(new FileWriter(EXIUtils.defaultCanonicalSchemaLocation));
         newCanonicalSchemaWriter.write(content);
         newCanonicalSchemaWriter.close();
-        return;
     }
 }

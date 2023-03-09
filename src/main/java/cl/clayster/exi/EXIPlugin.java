@@ -16,6 +16,7 @@
 package cl.clayster.exi;
 
 import org.apache.mina.transport.socket.SocketAcceptor;
+import org.apache.mina.transport.socket.nio.NioSocketAcceptor;
 import org.jivesoftware.openfire.XMPPServer;
 import org.jivesoftware.openfire.container.Plugin;
 import org.jivesoftware.openfire.container.PluginManager;
@@ -54,11 +55,12 @@ public class EXIPlugin implements Plugin
     public void destroyPlugin()
     {
         ConnectionManagerImpl connManager = (ConnectionManagerImpl) XMPPServer.getInstance().getConnectionManager();
-        if (connManager.getSocketAcceptor() != null && connManager.getSocketAcceptor().getFilterChain().contains(EXIFilter.filterName)) {
-            connManager.getSocketAcceptor().getFilterChain().remove(EXIFilter.filterName);
+        final NioSocketAcceptor socketAcceptor = connManager.getSocketAcceptor();
+        if (socketAcceptor != null && socketAcceptor.getFilterChain().contains(EXIFilter.filterName)) {
+            socketAcceptor.getFilterChain().remove(EXIFilter.filterName);
         }
-        if (connManager.getSocketAcceptor() != null && connManager.getSocketAcceptor().getFilterChain().contains(EXIAlternativeBindingFilter.filterName)) {
-            connManager.getSocketAcceptor().getFilterChain().remove(EXIAlternativeBindingFilter.filterName);
+        if (socketAcceptor != null && socketAcceptor.getFilterChain().contains(EXIAlternativeBindingFilter.filterName)) {
+            socketAcceptor.getFilterChain().remove(EXIAlternativeBindingFilter.filterName);
         }
     }
 }

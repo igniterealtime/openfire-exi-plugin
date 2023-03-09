@@ -35,7 +35,9 @@ import org.xml.sax.SAXException;
 
 import javax.xml.transform.TransformerException;
 import java.io.*;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Calendar;
@@ -54,7 +56,7 @@ public class EXIFilter extends IoFilterAdapter
     private static final Logger Log = LoggerFactory.getLogger(EXIFilter.class);
 
     public static final String filterName = "exiFilter";
-    private String setupReceived = "setupReceived";
+    private final String setupReceived = "setupReceived";
 
     public EXIFilter()
     {
@@ -66,7 +68,7 @@ public class EXIFilter extends IoFilterAdapter
         //"<failure xmlns='http://jabber.org/protocol/compress'><unsupported-method/></failure>"
         if (writeRequest.getMessage() instanceof IoBuffer) {
             int currentPos = ((IoBuffer) writeRequest.getMessage()).position();
-            String msg = Charset.forName("UTF-8").decode(((IoBuffer) writeRequest.getMessage()).buf()).toString();
+            String msg = StandardCharsets.UTF_8.decode(((IoBuffer) writeRequest.getMessage()).buf()).toString();
             ((IoBuffer) writeRequest.getMessage()).position(currentPos);
             if (session.containsAttribute(setupReceived) && msg.contains("http://jabber.org/protocol/compress") && msg.contains("unsupported-method")) {
                 return;
@@ -79,9 +81,7 @@ public class EXIFilter extends IoFilterAdapter
     }
 
     /**
-     * <p>Identifies EXI sessions (based on distinguishing bits -> should be based on Negotiation) and adds an EXIEncoder and EXIDecoder to that session</p>
-     *
-     * @throws Exception
+     * Identifies EXI sessions (based on distinguishing bits -> should be based on Negotiation) and adds an EXIEncoder and EXIDecoder to that session
      */
     @Override
     public void messageReceived(NextFilter nextFilter, IoSession session, Object message) throws Exception
@@ -137,7 +137,7 @@ public class EXIFilter extends IoFilterAdapter
                     session.write(bb);
                     addCodec(session);
                 } else {
-                    IoBuffer bb = IoBuffer.wrap("<failure xmlns=\'http://jabber.org/protocol/compress\'><setup-failed/></failure>".getBytes());
+                    IoBuffer bb = IoBuffer.wrap("<failure xmlns='http://jabber.org/protocol/compress'><setup-failed/></failure>".getBytes());
                     session.write(bb);
                 }
                 return;
@@ -148,14 +148,14 @@ public class EXIFilter extends IoFilterAdapter
 
 
     /**
-     * Parses a <setup> stanza sent by the client and generates a corresponding <setupResponse> stanza. It also creates a Configuration Id, which is
-     * a UUID followed by '-'; 1 or 0 depending if the configuration is <b>strict</b> or not; and the <b>block size</b> for the EXI Options to use.
+     * Parses a <setup> stanza sent by the client and generates a corresponding <setupResponse> stanza. It also creates a Configuration ID, which is
+     * a UUID followed by '-'; 1 or 0 depending on the configuration being <b>strict</b> or not; and the <b>block size</b> for the EXI Options to use.
      *
-     * @param message A <code>String</code> containing the setup stanza
+     * @param setup   A <code>String</code> containing the setup stanza
      * @param session the IoSession that represents the connection to the client
-     * @return
+     * @return a setupResponse element
      */
-    String setupResponse(Element setup, IoSession session) throws NoSuchAlgorithmException, IOException
+    String setupResponse(Element setup, IoSession session) throws IOException
     {
         String setupResponse = null;
         String configId = "";
@@ -299,8 +299,8 @@ public class EXIFilter extends IoFilterAdapter
      * Once the server makes sure that it has all schemas needed, it creates a specific canonical schema for the connection being negotiated.
      * It takes the location from a general canonical schema which includes all the schemas contained in a given folder.
      *
-     * @param schemasStanzas
-     * @throws IOException
+     * @param setup         The setup stanza as received from a peer
+     * @param serverSchemas An XML document representing the schemas currently recognized by the server.
      */
     private String createCanonicalSchema(Element setup, Element serverSchemas) throws IOException
     {
@@ -351,17 +351,17 @@ public class EXIFilter extends IoFilterAdapter
         return schemaId;
     }
 
-    /** Compress **/
+    /* Compress **/
 
     /**
      * Associates an EXIDecoder and an EXIEncoder to this user's session.
      *
      * @param session IoSession associated to the user's socket
-     * @return
+     * @return The processor associated to the user's socket.
      */
     EXIProcessor createExiProcessor(IoSession session)
     {
-        EXIProcessor exiProcessor = null;
+        EXIProcessor exiProcessor;
         if (session.containsAttribute(EXIUtils.EXI_CONFIG)) {
             try {
                 EXISetupConfiguration exiConfig = (EXISetupConfiguration) session.getAttribute(EXIUtils.EXI_CONFIG);
@@ -392,35 +392,26 @@ public class EXIFilter extends IoFilterAdapter
             session.getFilterChain().remove(EXIAlternativeBindingFilter.filterName);
         if (fc.contains(UploadSchemaFilter.filterName))
             session.getFilterChain().remove(UploadSchemaFilter.filterName);
-        return;
     }
 
 
-/** uploadSchema **/
+    /* uploadSchema **/
 
     /**
      * Saves a new schema file on the server, which is sent using a Base64 encoding by an EXI client.
      * The name of the file is related to the time when the file was saved.
      *
      * @param content the content of the uploaded schema file (base64 encoded)
-     * @return The absolute pathname string denoting the newly created schema file.
-     * @throws IOException              while trying to decode the file content using Base64
-     * @throws DocumentException
-     * @throws NoSuchAlgorithmException
-     * @throws TransformerException
-     * @throws SAXException
-     * @throws EXIException
+     * @throws IOException while trying to decode the file content using Base64
      */
     void uploadMissingSchema(String content, IoSession session)
         throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException
     {
         String filePath = EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
-        OutputStream out = new FileOutputStream(filePath);
+        OutputStream out = Files.newOutputStream(Paths.get(filePath));
 
         content = content.substring(content.indexOf('>') + 1, content.indexOf("</"));
-        byte[] outputBytes = content.getBytes();
-
-        outputBytes = Base64.decode(content);
+        byte[] outputBytes = Base64.decode(content);
         out.write(outputBytes);
         out.close();
 
@@ -451,7 +442,7 @@ public class EXIFilter extends IoFilterAdapter
     /**
      * Saves an uploaded schema to a file. It also processes its md5Hash value and the length in bytes when those parameters are null (for base64 encoded files).
      *
-     * @param fileLocation
+     * @param fileLocation Location of the file
      * @param md5Hash      md5Hash for the file content for compressed files or null for base64 files
      * @param bytes        number of the file's bytes for compressed files or null for base64 files
      * @return the namespace of the schema being saved
@@ -490,7 +481,6 @@ public class EXIFilter extends IoFilterAdapter
         serverSchemas = DocumentHelper.parseText(sb.toString()).getRootElement();
 
         Element auxSchema;
-        @SuppressWarnings("unchecked")
         Iterator<Element> j = serverSchemas.elementIterator("schema");
         int i = 0;    // index where new schema should be (within the list of schemas)
         while (j.hasNext()) {
@@ -554,18 +544,11 @@ public class EXIFilter extends IoFilterAdapter
 
     /* downloadSchema */
 
-    /**
-     * @param schema
-     * @param session
-     * @throws NoSuchAlgorithmException
-     * @throws IOException
-     * @throws DocumentException
-     **/
     private void saveDownloadedSchema(String content, IoSession session) throws NoSuchAlgorithmException, IOException, DocumentException
     {
         String filePath = EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
 
-        OutputStream out = new FileOutputStream(filePath);
+        OutputStream out = Files.newOutputStream(Paths.get(filePath));
         out.write(content.getBytes());
         out.close();
 

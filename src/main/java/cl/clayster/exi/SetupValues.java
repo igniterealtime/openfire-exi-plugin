@@ -37,12 +37,16 @@ public class SetupValues
     static CodingMode getCodingMode(String alignment)
     {
         CodingMode cm = CodingMode.BIT_PACKED;
-        if (alignment.equals("byte-packed")) {
-            cm = CodingMode.BYTE_PACKED;
-        } else if (alignment.equals("pre-compression")) {
-            cm = CodingMode.PRE_COMPRESSION;
-        } else if (alignment.equals("compression")) {
-            cm = CodingMode.COMPRESSION;
+        switch (alignment) {
+            case "byte-packed":
+                cm = CodingMode.BYTE_PACKED;
+                break;
+            case "pre-compression":
+                cm = CodingMode.PRE_COMPRESSION;
+                break;
+            case "compression":
+                cm = CodingMode.COMPRESSION;
+                break;
         }
         return cm;
     }
@@ -50,20 +54,28 @@ public class SetupValues
     static String getFidelityOptionString(String fidelity)
     {
         String preserve = "";
-        if (fidelity.equals(FidelityOptions.FEATURE_COMMENT)) {
-            preserve = "preserveComments";
-        } else if (fidelity.equals(FidelityOptions.FEATURE_DTD)) {
-            preserve = "preserveDTD";
-        } else if (fidelity.equals(FidelityOptions.FEATURE_LEXICAL_VALUE)) {
-            preserve = "preserveLexical";
-        } else if (fidelity.equals(FidelityOptions.FEATURE_PI)) {
-            preserve = "preservePIs";
-        } else if (fidelity.equals(FidelityOptions.FEATURE_PREFIX)) {
-            preserve = "preservePrefixes";
-        } else if (fidelity.equals(FidelityOptions.FEATURE_SC)) {
-            preserve = "selfContained";
-        } else if (fidelity.equals(FidelityOptions.FEATURE_STRICT)) {
-            preserve = "strict";
+        switch (fidelity) {
+            case FidelityOptions.FEATURE_COMMENT:
+                preserve = "preserveComments";
+                break;
+            case FidelityOptions.FEATURE_DTD:
+                preserve = "preserveDTD";
+                break;
+            case FidelityOptions.FEATURE_LEXICAL_VALUE:
+                preserve = "preserveLexical";
+                break;
+            case FidelityOptions.FEATURE_PI:
+                preserve = "preservePIs";
+                break;
+            case FidelityOptions.FEATURE_PREFIX:
+                preserve = "preservePrefixes";
+                break;
+            case FidelityOptions.FEATURE_SC:
+                preserve = "selfContained";
+                break;
+            case FidelityOptions.FEATURE_STRICT:
+                preserve = "strict";
+                break;
         }
         return preserve;
     }
