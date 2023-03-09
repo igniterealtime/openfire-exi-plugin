@@ -103,7 +103,7 @@ public class EXICodecFilter extends IoFilterAdapter {
 						Element xml = DocumentHelper.parseText(xmlStr).getRootElement();
 						session.setAttribute("exiBytes", null); // old bytes have been used with the last message
                         Log.trace("DECODED({}): {}", session.hashCode(), xml.asXML());
-						if("open".equals(xml.getName())){
+						if("streamStart".equals(xml.getName())){
 							String open = EXIAlternativeBindingFilter.translateOpen(xml);
 							session.write(IoBuffer.wrap(EXIAlternativeBindingFilter.open(open).getBytes()));
 							super.messageReceived(nextFilter, session, open);
