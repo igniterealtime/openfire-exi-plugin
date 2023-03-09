@@ -230,29 +230,29 @@ public class EXIFilter extends IoFilterAdapter {
 				}
 				aux = setup.attributeValue(SetupValues.STRICT);
 				try {
-					if(aux != null && aux.equals("true")){
-						exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_STRICT, true);
+					if(aux != null){
+						exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_STRICT, Boolean.parseBoolean(aux));
 					}
 					else{
 						aux = setup.attributeValue(SetupValues.PRESERVE_COMMENTS);
-						if(aux != null && "true".equals(aux)){
-							exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_COMMENT, true);
+						if(aux != null){
+							exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_COMMENT, Boolean.parseBoolean(aux));
 						}
 						aux = setup.attributeValue(SetupValues.PRESERVE_DTD);
-						if(aux != null && "true".equals(aux)){
-							exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_DTD, true);
+						if(aux != null){
+							exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_DTD, Boolean.parseBoolean(aux));
 						}
 						aux = setup.attributeValue(SetupValues.PRESERVE_LEXICAL);
-						if(aux != null && "true".equals(aux)){
-							exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_LEXICAL_VALUE, true);
+                        if(aux != null){
+							exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_LEXICAL_VALUE, Boolean.parseBoolean(aux));
 						}
 						aux = setup.attributeValue(SetupValues.PRESERVE_PIS);
-						if(aux != null && "true".equals(aux)){
-							exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_PI, true);
+                        if(aux != null){
+							exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_PI, Boolean.parseBoolean(aux));
 						}
 						aux = setup.attributeValue(SetupValues.PRESERVE_PREFIXES);
-						if(aux != null && "true".equals(aux)){
-							exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_PREFIX, true);
+                        if(aux != null){
+							exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_PREFIX, Boolean.parseBoolean(aux));
 						}
 					}
 				} catch (UnsupportedOption e) {
