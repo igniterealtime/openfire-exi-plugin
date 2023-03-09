@@ -25,6 +25,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -247,42 +249,41 @@ public class EXIUtils {
 	        List<String> namespaces = new ArrayList<String>();		
 	        HashMap<String, String> schemasStanzas = new HashMap<String, String>();	
 	        int n = 0;
-	            
-            for (int i = 0; i < listOfFiles.length; i++) {
-            	file = listOfFiles[i];
-            	if (file.isFile() && file.getName().endsWith(".xsd")) {
-            	// se hace lo siguiente para cada archivo XSD en la carpeta folder	
-            		fileLocation = file.getAbsolutePath();
-					r = 0;
-					md.reset();
-					StringBuilder sb = new StringBuilder();
-	            	
-					if(fileLocation == null)	break;
-					is = new FileInputStream(fileLocation);
-					dis = new DigestInputStream(is, md);
-					
-					// leer el archivo y guardarlo en sb
-					while(r != -1){
-						r = dis.read();
-						sb.append((char)r);
-					}
-					
-					// buscar el namespace del schema
-					namespace = EXIUtils.getAttributeValue(sb.toString(), "targetNamespace");
-					md5Hash = EXIUtils.bytesToHex(md.digest());
-	
-					n = 0;
-					while(n < namespaces.size() &&
-							namespaces.get(n) != null &&
-							namespaces.get(n)
-							.compareToIgnoreCase(namespace) <= 0){
-						n++;
-					}
-					namespaces.add(n, namespace);
-					// schemasStanzas also contains schemaLocation to make it easier to generate a new canonicalSchema later
-					schemasStanzas.put(namespace, "<schema ns='" + namespace + "' bytes='" + file.length() + "' md5Hash='" + md5Hash + "' schemaLocation='" + fileLocation + "'/>");
-            	}
-			}
+
+            for (File listOfFile : listOfFiles) {
+                file = listOfFile;
+                if (file.isFile() && file.getName().endsWith(".xsd")) {
+                    // se hace lo siguiente para cada archivo XSD en la carpeta folder
+                    fileLocation = file.getAbsolutePath();
+                    r = 0;
+                    md.reset();
+                    StringBuilder sb = new StringBuilder();
+
+                    is = Files.newInputStream(Paths.get(fileLocation));
+                    dis = new DigestInputStream(is, md);
+
+                    // leer el archivo y guardarlo en sb
+                    while (r != -1) {
+                        r = dis.read();
+                        sb.append((char) r);
+                    }
+
+                    // buscar el namespace del schema
+                    namespace = EXIUtils.getAttributeValue(sb.toString(), "targetNamespace");
+                    md5Hash = EXIUtils.bytesToHex(md.digest());
+
+                    n = 0;
+                    while (n < namespaces.size() &&
+                        namespaces.get(n) != null &&
+                        namespaces.get(n)
+                            .compareToIgnoreCase(namespace) <= 0) {
+                        n++;
+                    }
+                    namespaces.add(n, namespace);
+                    // schemasStanzas also contains schemaLocation to make it easier to generate a new canonicalSchema later
+                    schemasStanzas.put(namespace, "<schema ns='" + namespace + "' bytes='" + file.length() + "' md5Hash='" + md5Hash + "' schemaLocation='" + fileLocation + "'/>");
+                }
+            }
             //variables to write the schemas files
             BufferedWriter stanzasWriter = null;
             stanzasWriter = new BufferedWriter(new FileWriter(EXIUtils.schemasFileLocation));

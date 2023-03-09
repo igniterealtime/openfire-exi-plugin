@@ -161,6 +161,7 @@ public class EXIFilter extends IoFilterAdapter {
 		//quick setup	 
 		configId = setup.attributeValue("configurationId"); 
 		if(configId != null){
+            Log.debug("Configuration ID found: {}", configId);
 			String agreement = "false";
 			try {
 				EXISetupConfiguration exiConfig = EXISetupConfiguration.parseQuickConfigId(configId);
@@ -189,13 +190,13 @@ public class EXIFilter extends IoFilterAdapter {
     		Element auxSchema1, auxSchema2;
     		String ns, bytes, md5Hash;
     		boolean agreement = true;	// turns to false when there is a missing schema 
-	        for (@SuppressWarnings("unchecked") Iterator<Element> i = setup.elementIterator("schema"); i.hasNext();) {
+	        for (Iterator<Element> i = setup.elementIterator("schema"); i.hasNext();) {
 	        	auxSchema1 = i.next();
 	        	missingSchema = true;
 	        	ns = auxSchema1.attributeValue("ns");
 	        	bytes = auxSchema1.attributeValue("bytes");
 	        	md5Hash = auxSchema1.attributeValue("md5Hash");
-	        	for(@SuppressWarnings("unchecked") Iterator<Element> j = serverSchemas.elementIterator("schema"); j.hasNext();){
+                for(Iterator<Element> j = serverSchemas.elementIterator("schema"); j.hasNext();){
 	        		auxSchema2 = j.next();
 	        		if(auxSchema2.attributeValue("ns").equals(ns)
 	        				&& auxSchema2.attributeValue("bytes").equals(bytes)
@@ -211,10 +212,12 @@ public class EXIFilter extends IoFilterAdapter {
 	        }
 	        
 	        if(!agreement){
+                Log.debug("The client's setup includes schemas that we do not recognize.");
 	        	session.getFilterChain().addBefore("xmpp", UploadSchemaFilter.filterName, new UploadSchemaFilter());
 	        }
 	        else{
-	        	EXISetupConfiguration exiConfig = new EXISetupConfiguration();
+                Log.debug("The client's setup includes only schemas that we recognize.");
+                EXISetupConfiguration exiConfig = new EXISetupConfiguration();
 		        // guardar el valor de blockSize y strict en session
 		        String aux = setup.attributeValue(SetupValues.ALIGNMENT);
 		        if(aux != null){

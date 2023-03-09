@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import org.xml.sax.*;
 import org.xml.sax.helpers.XMLReaderFactory;
 
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.*;
 import javax.xml.transform.sax.SAXSource;
 import javax.xml.transform.stream.StreamResult;
@@ -72,7 +73,7 @@ public class EXIProcessor {
 			
 			exiSource = new EXISource(exiFactory);
 	        exiReader = exiSource.getXMLReader();
-		} catch (IOException e){
+		} catch (IOException | ParserConfigurationException e){
 			throw new EXIException("Error while creating Grammars.", e);
 		} catch (TransformerConfigurationException e) {
 			throw new EXIException("Error while creating Transformer.", e);

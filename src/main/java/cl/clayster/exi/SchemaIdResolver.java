@@ -20,7 +20,9 @@ import com.siemens.ct.exi.core.grammars.Grammars;
 import com.siemens.ct.exi.grammars.GrammarFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xml.sax.SAXException;
 
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.IOException;
 
@@ -42,7 +44,7 @@ public class SchemaIdResolver implements com.siemens.ct.exi.core.SchemaIdResolve
 			try {
 				g = GrammarFactory.newInstance().createGrammars(f.getAbsolutePath(), new SchemaResolver());
 				g.setSchemaId(schemaId);
-			} catch (IOException e) {
+			} catch (IOException | ParserConfigurationException | SAXException e) {
                 Log.warn("Exception while trying to resolve schema ID '{}'.", schemaId, e);
 			}
 		}
