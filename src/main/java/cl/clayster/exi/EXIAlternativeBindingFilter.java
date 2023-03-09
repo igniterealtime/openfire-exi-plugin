@@ -60,7 +60,7 @@ public class EXIAlternativeBindingFilter extends IoFilterAdapter
             String msg = StandardCharsets.UTF_8.decode(((IoBuffer) writeRequest.getMessage()).buf()).toString();
             if (msg.contains("<stream:stream ")) {
                 String open = open(EXIUtils.getAttributeValue(msg, "id"));
-                Log.trace("ENCODING to send: {}", open);
+                Log.trace("Encoding {} XMPP characters into EXI bytes for session {}", open.length(), session.hashCode());
                 bb = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(open, true);
                 writeRequest.setMessage(bb);
                 super.filterWrite(nextFilter, session, writeRequest);
@@ -68,7 +68,7 @@ public class EXIAlternativeBindingFilter extends IoFilterAdapter
                 if (msg.contains("<stream:features")) {
                     msg = msg.substring(msg.indexOf("<stream:features"))
                         .replaceAll("<stream:features", "<stream:features xmlns:stream=\"http://etherx.jabber.org/streams\"");
-                    Log.trace("ENCODING to send: {}", msg);
+                    Log.trace("Encoding {} XMPP characters into EXI bytes for session {}", msg.length(), session.hashCode());
                     writeRequest.setMessage(((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(msg));
                     super.filterWrite(nextFilter, session, writeRequest);
                 }
@@ -82,7 +82,7 @@ public class EXIAlternativeBindingFilter extends IoFilterAdapter
                     msg = "<streamEnd xmlns:exi='http://jabber.org/protocol/compress/exi'/>";
                 }
             }
-            Log.trace("ENCODING to send: {}", msg);
+            Log.trace("Encoding {} XMPP characters into EXI bytes for session {}", msg.length(), session.hashCode());
             bb = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(msg);
             writeRequest.setMessage(bb);
             super.filterWrite(nextFilter, session, writeRequest);
@@ -141,14 +141,12 @@ public class EXIAlternativeBindingFilter extends IoFilterAdapter
                         exiConfig = (EXISetupConfiguration) session.getAttribute(EXIUtils.EXI_CONFIG);
                     }
                     session.setAttribute(EXIUtils.EXI_PROCESSOR, new EXIProcessor(exiConfig));
-                    Log.debug("new EXIProcessor: {}", session.getAttribute(EXIUtils.EXI_PROCESSOR));
-                    Log.debug("with: {}", exiConfig);
+                    Log.debug("new EXIProcessor: {} with: {}", session.getAttribute(EXIUtils.EXI_PROCESSOR), exiConfig);
                 }
             }
             if (session.containsAttribute(EXIAlternativeBindingFilter.flag)) {
                 // Decode EXI bytes
-                Log.trace("Decoding: {}", EXIUtils.bytesToHex(exiBytes));
-                Log.trace("\tusing EXISetupConfigurations: {}", (session.containsAttribute(EXIUtils.EXI_CONFIG) ? session.getAttribute(EXIUtils.EXI_CONFIG) : new EXISetupConfiguration()));
+                Log.trace("Decoding {} EXI bytes into XMPP characters, using EXISetupConfigurations: {}", exiBytes.length, session.containsAttribute(EXIUtils.EXI_CONFIG) ? session.getAttribute(EXIUtils.EXI_CONFIG) : new EXISetupConfiguration());
                 try {
                     msg = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).decodeByteArray(exiBytes);
                 } catch (TransformerException e) {
@@ -165,7 +163,7 @@ public class EXIAlternativeBindingFilter extends IoFilterAdapter
                 session.setAttribute("exiBytes", null);    // old bytes have been used with the last message
 
                 Element xml = DocumentHelper.parseText(msg).getRootElement();
-                Log.trace("Decoded: {}", xml.asXML());
+                Log.trace("Decoded EXI bytes into {} XMPP characters.", xml.asXML().length());
                 if (xml.getName().equals("open")) {
                     if (session.containsAttribute(EXIAlternativeBindingFilter.agreementSentFlag)) {
                         // this is the last open (after receiving setupResponse)

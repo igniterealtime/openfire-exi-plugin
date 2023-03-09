@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import javax.xml.transform.TransformerException;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -47,10 +48,10 @@ public class EXICodecFilter extends IoFilterAdapter
     @Override
     public void filterWrite(NextFilter nextFilter, IoSession session, WriteRequest writeRequest) throws Exception
     {
-        String msg = "";
+        String msg;
         if (writeRequest.getMessage() instanceof IoBuffer) {
-            msg = StandardCharsets.UTF_8.decode(((IoBuffer) writeRequest.getMessage()).buf()).toString();
-            Log.trace("ENCODING WITH CODECFILTER({}): {}", session.hashCode(), msg);
+            final ByteBuffer bytes = ((IoBuffer) writeRequest.getMessage()).buf();
+            msg = StandardCharsets.UTF_8.decode(bytes).toString();
             if (msg.startsWith("</stream:stream>")) {
                 if (session.containsAttribute(EXIAlternativeBindingFilter.flag)) {
                     msg = "<streamEnd xmlns:exi='http://jabber.org/protocol/compress/exi'/>";
@@ -60,9 +61,9 @@ public class EXICodecFilter extends IoFilterAdapter
             } else if (msg.startsWith("<exi:open")) {
                 msg = EXIAlternativeBindingFilter.open(null);
             }
+            Log.trace("Encoding {} XMPP characters into EXI bytes for session {}", msg.length(), session.hashCode());
             try {
-                IoBuffer bb = IoBuffer.allocate(msg.length());
-                bb = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(msg);
+                IoBuffer bb = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(msg);
                 writeRequest.setMessage(bb);
                 super.filterWrite(nextFilter, session, writeRequest);
                 return;
@@ -89,7 +90,7 @@ public class EXICodecFilter extends IoFilterAdapter
                 exiBytes = dest;
             }
 
-            Log.trace("DECODING({}): {}", session.hashCode(), EXIUtils.bytesToHex(exiBytes));
+            Log.trace("Decoding {} EXI bytes from session {} into XMPP characters.", exiBytes.length, session.hashCode());
             if (!EXIProcessor.isEXI(exiBytes[0])) {
                 super.messageReceived(nextFilter, session, message);
             } else {
@@ -101,7 +102,6 @@ public class EXICodecFilter extends IoFilterAdapter
                         String xmlStr = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).decode(bis);
                         Element xml = DocumentHelper.parseText(xmlStr).getRootElement();
                         session.setAttribute("exiBytes", null); // old bytes have been used with the last message
-                        Log.trace("DECODED({}): {}", session.hashCode(), xml.asXML());
                         if ("streamStart".equals(xml.getName())) {
                             String open = EXIAlternativeBindingFilter.translateOpen(xml);
                             session.write(IoBuffer.wrap(EXIAlternativeBindingFilter.open(open).getBytes()));
@@ -115,7 +115,7 @@ public class EXICodecFilter extends IoFilterAdapter
                         bis.reset();
                         byte[] restingBytes = new byte[bis.available()];
                         bis.read(restingBytes);
-                        Log.trace("Saving: {}", EXIUtils.bytesToHex(restingBytes), e);
+                        Log.trace("Unable to decode EXI data received from session {}. Incomplete data? Saving for later processing.", session.hashCode(), e);
                         session.setAttribute("exiBytes", restingBytes);
                         super.messageReceived(nextFilter, session, IoBuffer.wrap("".getBytes()));
                         return;
