@@ -117,7 +117,7 @@ public class EXICodecFilter extends IoFilterAdapter {
 						bis.reset();
 						byte[] restingBytes = new byte[bis.available()];
 						bis.read(restingBytes);
-                        Log.trace("Saving: {}", EXIUtils.bytesToHex(restingBytes));
+                        Log.trace("Saving: {}", EXIUtils.bytesToHex(restingBytes), e);
 						session.setAttribute("exiBytes", restingBytes);
 						super.messageReceived(nextFilter, session, IoBuffer.wrap("".getBytes()));
 						return;
