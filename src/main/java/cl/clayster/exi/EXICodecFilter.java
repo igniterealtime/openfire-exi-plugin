@@ -58,7 +58,7 @@ public class EXICodecFilter extends IoFilterAdapter
                 } else {
                     msg = "<exi:streamEnd xmlns:exi='http://jabber.org/protocol/compress/exi'/>";
                 }
-            } else if (msg.startsWith("<exi:open")) {
+            } else if (msg.startsWith("<exi:streamStart")) {
                 msg = EXIAlternativeBindingFilter.open(null);
             }
             Log.trace("Encoding {} XMPP characters into EXI bytes for session {}", msg.length(), session.hashCode());

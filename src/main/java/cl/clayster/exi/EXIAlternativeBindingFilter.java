@@ -227,7 +227,7 @@ public class EXIAlternativeBindingFilter extends IoFilterAdapter
     {
         String hostName = JiveGlobals.getProperty("xmpp.domain", "127.0.0.1").toLowerCase();
         StringBuilder sb = new StringBuilder();
-        sb.append("<exi:open xmlns:exi='http://jabber.org/protocol/compress/exi'")
+        sb.append("<exi:streamStart xmlns:exi='http://jabber.org/protocol/compress/exi'")
             .append(" version='1.0' from='").append(hostName).append("' xml:lang='en' xmlns:xml='http://www.w3.org/XML/1998/namespace'");
         if (id != null) {
             sb.append(" id=\"" + id + "\"");
@@ -235,7 +235,7 @@ public class EXIAlternativeBindingFilter extends IoFilterAdapter
         sb.append("><exi:xmlns prefix='stream' namespace='http://etherx.jabber.org/streams'/>"
             + "<exi:xmlns prefix='' namespace='jabber:client'/>"
             + "<exi:xmlns prefix='xml' namespace='http://www.w3.org/XML/1998/namespace'/>"
-            + "</exi:open>");
+            + "</exi:streamStart>");
         return sb.toString();
     }
 }

@@ -63,9 +63,12 @@ public class SchemaResolver implements XMLEntityResolver
                 final String namespace = doc.getDocumentElement().getAttribute("targetNamespace");
 
                 Log.debug("Found namespace '{}' in file: {}", namespace, fileLocation);
-                this.namespaceToPath.put(namespace, file.getCanonicalPath());
+                this.namespaceToPath.put(namespace, fileLocation);
             }
         }
+
+        // Do not use the schema that is defining the schema as content of the schema!
+        namespaceToPath.remove("urn:xmpp:exi:cs");
 
         // Add DTDs
         this.namespaceToPath.put("-//W3C//DTD XMLSCHEMA 200102//EN", new File(EXIUtils.schemasFolder + "XMLSchema.dtd").getAbsolutePath());

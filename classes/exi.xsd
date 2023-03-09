@@ -7,10 +7,10 @@
     xmlns:client='jabber:client'
     xmlns:streams='http://etherx.jabber.org/streams'
     elementFormDefault='qualified'>
-    
+
     <xs:import namespace="http://www.w3.org/XML/1998/namespace"/>
     <xs:import namespace="http://etherx.jabber.org/streams"/>
-    
+
     <xs:element name='setup' type='Setup'/>
     <xs:element name='setupResponse' type='SetupResponse'/>
 
@@ -20,33 +20,33 @@
             <xs:element name='datatypeRepresentationMap' type='DatatypeRepresentationMap'/>
         </xs:choice>
         <xs:attributeGroup ref='Options'/>
-    <xs:attribute name='configurationId' type='xs:string' use='optional'/>
-    <xs:attribute name='configurationLocation' type='xs:string' use='optional'/>
+        <xs:attribute name='configurationId' type='xs:string' use='optional'/>
+        <xs:attribute name='configurationLocation' type='xs:string' use='optional'/>
     </xs:complexType>
 
     <xs:complexType name='SetupResponse'>
         <xs:choice minOccurs='0' maxOccurs='unbounded'>
             <xs:element name='schema' type='Schema'/>
             <xs:element name='datatypeRepresentationMap' type='DatatypeRepresentationMap'/>
-        <xs:element name='missingSchema' type='Schema'/>
+            <xs:element name='missingSchema' type='Schema'/>
         </xs:choice>
         <xs:attributeGroup ref='Options'/>
-    <xs:attribute name='configurationId' type='xs:string' use='optional'/>
-    <xs:attribute name='configurationLocation' type='xs:string' use='optional'/>
-    <xs:attribute name='agreement' type='xs:boolean' use='optional' default='false'/>
+        <xs:attribute name='configurationId' type='xs:string' use='optional'/>
+        <xs:attribute name='configurationLocation' type='xs:string' use='optional'/>
+        <xs:attribute name='agreement' type='xs:boolean' use='optional' default='false'/>
     </xs:complexType>
-    
+
     <xs:complexType name='Schema'>
         <xs:attribute name='ns' type='xs:string' use='required'/>
         <xs:attribute name='bytes' type='xs:positiveInteger' use='required'/>
         <xs:attribute name='md5Hash' type='MD5Hash' use='required'/>
     </xs:complexType>
-    
+
     <xs:complexType name='DatatypeRepresentationMap'>
         <xs:attribute name='type' type='xs:string' use='required'/>
         <xs:attribute name='representAs' type='xs:string' use='required'/>
     </xs:complexType>
-    
+
     <xs:attributeGroup name='Options'>
         <xs:attribute name='version' type='xs:positiveInteger' use='optional' default='1'/>
         <xs:attribute name='alignment' type='Alignment' use='optional' default='bit-packed'>
@@ -109,21 +109,21 @@
                 <xs:documentation>The valuePartitionCapacity option specifies the maximum number of value content items in the string table at any given time. The default value "unbounded" is assumed when the "valuePartitionCapacity" element is absent in the EXI Options document. Section 7.3.3 Partitions Optimized for Frequent use of String Literals specifies the behavior of the string table when this capacity is reached.</xs:documentation>
             </xs:annotation>
         </xs:attribute>
-    <xs:attribute name='sessionWideBuffers' type='xs:boolean' use='optional' default='false'>
-        <xs:annotation>
-        <xs:documentation>If set to true, all buffers, string tables, etc. will be maintained during the entire session. This may improve performance during time since strings
-        can be omitted in the compressed binary stream, but it might also in some cases degrade performance since more options are available in the tables, requiring more bits 
-        to encode strings. The default value is false, meaning that buffers, string tables, etc., are cleared between each stanza.</xs:documentation>
-        </xs:annotation>
-    </xs:attribute>
+        <xs:attribute name='sessionWideBuffers' type='xs:boolean' use='optional' default='false'>
+            <xs:annotation>
+                <xs:documentation>If set to true, all buffers, string tables, etc. will be maintained during the entire session. This may improve performance during time since strings
+                    can be omitted in the compressed binary stream, but it might also in some cases degrade performance since more options are available in the tables, requiring more bits
+                    to encode strings. The default value is false, meaning that buffers, string tables, etc., are cleared between each stanza.</xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
     </xs:attributeGroup>
-    
+
     <xs:simpleType name='MD5Hash'>
         <xs:restriction base='xs:string'>
             <xs:pattern value='[0-9a-f]{32}'/>
         </xs:restriction>
     </xs:simpleType>
-    
+
     <xs:simpleType name='Alignment'>
         <xs:restriction base='xs:string'>
             <xs:enumeration value='bit-packed'>
@@ -143,101 +143,101 @@
             </xs:enumeration>
         </xs:restriction>
     </xs:simpleType>
-    
+
     <xs:element name='uploadSchema'>
-    <xs:complexType>
-        <xs:simpleContent>
-        <xs:extension base='xs:base64Binary'>
-            <xs:attribute name='contentType' type='ContentType' use='optional' default='Text'/>
-            <xs:attribute name='bytes' type='xs:positiveInteger' use='optional'/>
-            <xs:attribute name='md5Hash' type='MD5Hash' use='optional'/>
-        </xs:extension>
-        </xs:simpleContent>
-    </xs:complexType>
+        <xs:complexType>
+            <xs:simpleContent>
+                <xs:extension base='xs:base64Binary'>
+                    <xs:attribute name='contentType' type='ContentType' use='optional' default='Text'/>
+                    <xs:attribute name='bytes' type='xs:positiveInteger' use='optional'/>
+                    <xs:attribute name='md5Hash' type='MD5Hash' use='optional'/>
+                </xs:extension>
+            </xs:simpleContent>
+        </xs:complexType>
     </xs:element>
-    
+
     <xs:simpleType name='ContentType'>
-    <xs:restriction base='xs:string'>
-        <xs:enumeration value='Text'/>
-        <xs:enumeration value='ExiBody'/>
-        <xs:enumeration value='ExiDocument'/>
-    </xs:restriction>
+        <xs:restriction base='xs:string'>
+            <xs:enumeration value='Text'/>
+            <xs:enumeration value='ExiBody'/>
+            <xs:enumeration value='ExiDocument'/>
+        </xs:restriction>
     </xs:simpleType>
-    
+
     <xs:element name='downloadSchema' type='DownloadSchema'/>
     <xs:element name='downloadSchemaResponse' type='DownloadSchemaResponse'/>
 
     <xs:complexType name='DownloadSchema'>
         <xs:attribute name='url' type='xs:string' use='required'/>
     </xs:complexType>
-    
+
     <xs:complexType name='DownloadSchemaResponse'>
         <xs:complexContent>
             <xs:extension base='DownloadSchema'>
-        <xs:choice minOccurs='0' maxOccurs='1'>
-            <xs:element name='httpError'>
-            <xs:complexType>
-                <xs:attribute name='code' type='xs:positiveInteger' use='required'/>
-                <xs:attribute name='message' type='xs:string' use='required'/>
-            </xs:complexType>
-            </xs:element>
-            <xs:element name='invalidUrl'>
-            <xs:complexType>
-                <xs:attribute name='message' type='xs:string' use='required'/>
-            </xs:complexType>
-            </xs:element>
-            <xs:element name='timeout'>
-            <xs:complexType>
-                <xs:attribute name='message' type='xs:string' use='required'/>
-            </xs:complexType>
-            </xs:element>
-            <xs:element name='invalidContentType'>
-            <xs:complexType>
-                <xs:attribute name='contentTypeReturned' type='xs:string' use='required'/>
-            </xs:complexType>
-            </xs:element>
-            <xs:element name='error'>
-            <xs:complexType>
-                <xs:attribute name='message' type='xs:string' use='required'/>
-            </xs:complexType>
-            </xs:element>
-        </xs:choice>
+                <xs:choice minOccurs='0' maxOccurs='1'>
+                    <xs:element name='httpError'>
+                        <xs:complexType>
+                            <xs:attribute name='code' type='xs:positiveInteger' use='required'/>
+                            <xs:attribute name='message' type='xs:string' use='required'/>
+                        </xs:complexType>
+                    </xs:element>
+                    <xs:element name='invalidUrl'>
+                        <xs:complexType>
+                            <xs:attribute name='message' type='xs:string' use='required'/>
+                        </xs:complexType>
+                    </xs:element>
+                    <xs:element name='timeout'>
+                        <xs:complexType>
+                            <xs:attribute name='message' type='xs:string' use='required'/>
+                        </xs:complexType>
+                    </xs:element>
+                    <xs:element name='invalidContentType'>
+                        <xs:complexType>
+                            <xs:attribute name='contentTypeReturned' type='xs:string' use='required'/>
+                        </xs:complexType>
+                    </xs:element>
+                    <xs:element name='error'>
+                        <xs:complexType>
+                            <xs:attribute name='message' type='xs:string' use='required'/>
+                        </xs:complexType>
+                    </xs:element>
+                </xs:choice>
                 <xs:attribute name='result' type='xs:boolean' use='required'/>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
-    
-    <xs:element name='open'>
-    <xs:complexType>
-        <xs:sequence>
-        <xs:element name='xmlns' minOccurs='0' maxOccurs='unbounded'>
-            <xs:complexType>
-            <xs:attribute name='prefix' type='xs:string' use='required'/>
-            <xs:attribute name='namespace' type='xs:string' use='required'/>
-            </xs:complexType>
-        </xs:element>
-        <xs:element ref='streams:features'
-                minOccurs='0'
-                maxOccurs='1'/>
-        <xs:any namespace='urn:ietf:params:xml:ns:xmpp-tls'
-            minOccurs='0'
-            maxOccurs='1'/>
-        <xs:any namespace='urn:ietf:params:xml:ns:xmpp-sasl'
-            minOccurs='0'
-            maxOccurs='1'/>
-        <xs:element ref='streams:error' minOccurs='0' maxOccurs='1'/>
-        </xs:sequence>
-        <xs:attribute name='from' type='xs:string' use='optional'/>
-        <xs:attribute name='id' type='xs:string' use='optional'/>
-        <xs:attribute name='to' type='xs:string' use='optional'/>
-        <xs:attribute name='version' type='xs:decimal' use='optional'/>
-        <xs:attribute ref='xml:lang' use='optional'/>
-        <xs:anyAttribute namespace='##other' processContents='lax'/>
-    </xs:complexType>
+
+    <xs:element name='streamStart'>
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name='xmlns' minOccurs='0' maxOccurs='unbounded'>
+                    <xs:complexType>
+                        <xs:attribute name='prefix' type='xs:string' use='required'/>
+                        <xs:attribute name='namespace' type='xs:string' use='required'/>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element ref='streams:features'
+                            minOccurs='0'
+                            maxOccurs='1'/>
+                <xs:any namespace='urn:ietf:params:xml:ns:xmpp-tls'
+                        minOccurs='0'
+                        maxOccurs='1'/>
+                <xs:any namespace='urn:ietf:params:xml:ns:xmpp-sasl'
+                        minOccurs='0'
+                        maxOccurs='1'/>
+                <xs:element ref='streams:error' minOccurs='0' maxOccurs='1'/>
+            </xs:sequence>
+            <xs:attribute name='from' type='xs:string' use='optional'/>
+            <xs:attribute name='id' type='xs:string' use='optional'/>
+            <xs:attribute name='to' type='xs:string' use='optional'/>
+            <xs:attribute name='version' type='xs:decimal' use='optional'/>
+            <xs:attribute ref='xml:lang' use='optional'/>
+            <xs:anyAttribute namespace='##other' processContents='lax'/>
+        </xs:complexType>
     </xs:element>
-    
+
     <xs:element name='streamEnd'>
-    <xs:complexType/>
+        <xs:complexType/>
     </xs:element>
-    
+
 </xs:schema>
