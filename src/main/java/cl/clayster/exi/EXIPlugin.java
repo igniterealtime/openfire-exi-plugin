@@ -26,41 +26,39 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 
-public class EXIPlugin implements Plugin{
-
+public class EXIPlugin implements Plugin
+{
     private static final Logger Log = LoggerFactory.getLogger(EXIPlugin.class);
 
-	@Override
-	public void initializePlugin(PluginManager manager, File pluginDirectory) {
-		try {
-			EXIUtils.generateSchemasFile();
-			EXIUtils.generateDefaultCanonicalSchema();
-		} catch (IOException e) {
+    @Override
+    public void initializePlugin(PluginManager manager, File pluginDirectory)
+    {
+        try {
+            EXIUtils.generateSchemasFile();
+            EXIUtils.generateDefaultCanonicalSchema();
+        } catch (IOException e) {
             Log.warn("Exception while trying to initialize the Openfire EXI plugin.", e);
-			return;
-		}
+            return;
+        }
         ConnectionManagerImpl connManager = (ConnectionManagerImpl) XMPPServer.getInstance().getConnectionManager();
         SocketAcceptor socketAcceptor = connManager.getSocketAcceptor();
-        if (socketAcceptor == null)	return;
-        
-    	socketAcceptor.getFilterChain().addBefore("xmpp", EXIAlternativeBindingFilter.filterName, new EXIAlternativeBindingFilter());
-    	EXIFilter exiFilter = new EXIFilter();
-    	socketAcceptor.getFilterChain().addAfter("xmpp", EXIFilter.filterName, exiFilter);
-        Log.info("Starting EXI Plugin");
-	}
+        if (socketAcceptor == null) return;
 
-	@Override
-	public void destroyPlugin() {
-		ConnectionManagerImpl connManager = (ConnectionManagerImpl) XMPPServer.getInstance().getConnectionManager();
-		if (connManager.getSocketAcceptor() != null && connManager.getSocketAcceptor().getFilterChain().contains(EXIFilter.filterName)) {
-        	connManager.getSocketAcceptor().getFilterChain().remove(EXIFilter.filterName);
+        socketAcceptor.getFilterChain().addBefore("xmpp", EXIAlternativeBindingFilter.filterName, new EXIAlternativeBindingFilter());
+        EXIFilter exiFilter = new EXIFilter();
+        socketAcceptor.getFilterChain().addAfter("xmpp", EXIFilter.filterName, exiFilter);
+        Log.info("Starting EXI Plugin");
+    }
+
+    @Override
+    public void destroyPlugin()
+    {
+        ConnectionManagerImpl connManager = (ConnectionManagerImpl) XMPPServer.getInstance().getConnectionManager();
+        if (connManager.getSocketAcceptor() != null && connManager.getSocketAcceptor().getFilterChain().contains(EXIFilter.filterName)) {
+            connManager.getSocketAcceptor().getFilterChain().remove(EXIFilter.filterName);
         }
         if (connManager.getSocketAcceptor() != null && connManager.getSocketAcceptor().getFilterChain().contains(EXIAlternativeBindingFilter.filterName)) {
-        	connManager.getSocketAcceptor().getFilterChain().remove(EXIAlternativeBindingFilter.filterName);
+            connManager.getSocketAcceptor().getFilterChain().remove(EXIAlternativeBindingFilter.filterName);
         }
-        
-	}
-	
-	
-
+    }
 }
