@@ -39,7 +39,9 @@ import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 /**
  * This class is a filter that recognizes EXI sessions and adds an EXIEncoder and an EXIDecoder to those sessions. 
@@ -271,7 +273,7 @@ public class EXIFilter extends IoFilterAdapter {
 					exiConfig.setSessionWideBuffers(true);
 				}
 				// generate canonical schema
-		        configId = createCanonicalSchema(setup);
+		        configId = createCanonicalSchema(setup, serverSchemas);
 		        exiConfig.setSchemaId(configId);
 		        session.setAttribute(EXIUtils.EXI_CONFIG, exiConfig);
 		        session.setAttribute(EXIUtils.SCHEMA_ID, configId);	// still necessary for uploading schemas with UploadSchemaFilter
@@ -301,8 +303,16 @@ public class EXIFilter extends IoFilterAdapter {
 	 * @param schemasStanzas
 	 * @throws IOException
 	 */
-	private String createCanonicalSchema(Element setup) throws IOException {
-		StringBuilder sb = new StringBuilder();
+	private String createCanonicalSchema(Element setup, Element serverSchemas) throws IOException {
+
+        final Map<String, String> serverSchemaLocationsByNamespace = new HashMap<>();
+        final Iterator<Element> schema1 = serverSchemas.elementIterator("schema");
+        while (schema1.hasNext()) {
+            Element next = schema1.next();
+            serverSchemaLocationsByNamespace.put(next.attributeValue("ns"), next.attributeValue("schemaLocation"));
+        }
+
+        StringBuilder sb = new StringBuilder();
 		sb.append("<?xml version='1.0' encoding='UTF-8'?>"
         		+ "\n\n<xs:schema "
         		+ "\n\txmlns:xs='http://www.w3.org/2001/XMLSchema'"
@@ -312,9 +322,16 @@ public class EXIFilter extends IoFilterAdapter {
         		+ "\n\telementFormDefault='qualified'>");
         
 		Element schema;
-        for (@SuppressWarnings("unchecked") Iterator<Element> i = setup.elementIterator("schema"); i.hasNext(); ) {
+        for (Iterator<Element> i = setup.elementIterator("schema"); i.hasNext(); ) {
         	schema = i.next();
-        	sb.append("\n\t<xs:import namespace='" + schema.attributeValue("ns") + "'/>");
+            final String namespace = schema.attributeValue("ns");
+            final String schemaLocation = serverSchemaLocationsByNamespace.get(namespace);
+
+        	sb.append("\n\t<xs:import namespace='").append(namespace).append("'");
+            if (schemaLocation != null) {
+                sb.append(" schemaLocation='").append(schemaLocation.replace("/home/guus/SourceCode/IgniteRealtime/openfire-plugins/openfire-exi-plugin/classes/", "../")).append("'");
+            }
+            sb.append("/>");
         }
         sb.append("\n</xs:schema>");
         
@@ -353,6 +370,8 @@ public class EXIFilter extends IoFilterAdapter {
                 Log.warn("Exception while trying to create an EXI processor.", e);
 				return null;
 			}
+        } else {
+            throw new IllegalStateException("Unable to create EXI Processor: no config on session!");
         }
 		return exiProcessor;
     }
