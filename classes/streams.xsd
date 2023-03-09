@@ -1,10 +1,11 @@
 <?xml version='1.0' encoding='UTF-8'?>
 
 <xs:schema
-    xmlns:xs='http://www.w3.org/2001/XMLSchema'
-    targetNamespace='http://etherx.jabber.org/streams'
-    xmlns='http://etherx.jabber.org/streams'
-    elementFormDefault='unqualified'>
+        xmlns:xs='http://www.w3.org/2001/XMLSchema'
+        xmlns:xml='http://www.w3.org/XML/1998/namespace'
+        targetNamespace='http://etherx.jabber.org/streams'
+        xmlns='http://etherx.jabber.org/streams'
+        elementFormDefault='unqualified'>
 
   <xs:import namespace='jabber:client'
              schemaLocation='http://xmpp.org/schemas/jabber-client.xsd'/>
@@ -23,8 +24,8 @@
     <xs:complexType>
       <xs:sequence xmlns:client='jabber:client'
                    xmlns:server='jabber:server'>
-        <xs:element ref='features' 
-                    minOccurs='0' 
+        <xs:element ref='features'
+                    minOccurs='0'
                     maxOccurs='1'/>
         <xs:any namespace='urn:ietf:params:xml:ns:xmpp-tls'
                 minOccurs='0'
@@ -32,10 +33,12 @@
         <xs:any namespace='urn:ietf:params:xml:ns:xmpp-sasl'
                 minOccurs='0'
                 maxOccurs='1'/>
+        <xs:element name="delim" type="xs:boolean" minOccurs="1" maxOccurs="1" />
         <xs:any namespace='##other'
                 minOccurs='0'
                 maxOccurs='unbounded'
                 processContents='lax'/>
+        <xs:element name="delim" type="xs:boolean" minOccurs="1" maxOccurs="1" />
         <xs:choice minOccurs='0' maxOccurs='1'>
           <xs:choice minOccurs='0' maxOccurs='unbounded'>
             <xs:element ref='client:message'/>
@@ -55,7 +58,7 @@
       <xs:attribute name='to' type='xs:string' use='optional'/>
       <xs:attribute name='version' type='xs:decimal' use='optional'/>
       <xs:attribute ref='xml:lang' use='optional'/>
-      <xs:anyAttribute namespace='##other' processContents='lax'/> 
+      <xs:anyAttribute namespace='##other' processContents='lax'/>
     </xs:complexType>
   </xs:element>
 
@@ -77,6 +80,7 @@
         <xs:element ref='err:text'
                     minOccurs='0'
                     maxOccurs='1'/>
+        <xs:element name="delim" type="xs:boolean" minOccurs="1" maxOccurs="1" />
         <xs:any     namespace='##other'
                     minOccurs='0'
                     maxOccurs='1'
