@@ -19,31 +19,29 @@ import com.siemens.ct.exi.core.CodingMode;
 import com.siemens.ct.exi.core.FidelityOptions;
 import com.siemens.ct.exi.core.exceptions.EXIException;
 import com.siemens.ct.exi.core.exceptions.UnsupportedOption;
-import org.apache.commons.io.FileUtils;
 import org.apache.mina.core.buffer.IoBuffer;
 import org.apache.mina.core.filterchain.IoFilterAdapter;
 import org.apache.mina.core.filterchain.IoFilterChain;
 import org.apache.mina.core.session.IoSession;
 import org.apache.mina.core.write.WriteRequest;
 import org.apache.xerces.impl.dv.util.Base64;
-import org.dom4j.DocumentException;
-import org.dom4j.DocumentHelper;
-import org.dom4j.Element;
+import org.dom4j.*;
+import org.dom4j.io.OutputFormat;
+import org.dom4j.io.XMLWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
 import javax.xml.transform.TransformerException;
-import java.io.*;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 /**
  * This class is a filter that recognizes EXI sessions and adds an EXIEncoder and an EXIDecoder to those sessions.
@@ -286,7 +284,7 @@ public class EXIFilter extends IoFilterAdapter
             setup.setName("setupResponse");
 
             setupResponse = setup.asXML();
-        } catch (DocumentException | IOException e) {
+        } catch (DocumentException | IOException | NoSuchAlgorithmException e) {
             Log.warn("Exception while trying to process a 'setup' from a client.", e);
             return null;
         }
@@ -302,7 +300,7 @@ public class EXIFilter extends IoFilterAdapter
      * @param setup         The setup stanza as received from a peer
      * @param serverSchemas An XML document representing the schemas currently recognized by the server.
      */
-    private String createCanonicalSchema(Element setup, Element serverSchemas) throws IOException
+    private String createCanonicalSchema(Element setup, Element serverSchemas) throws IOException, NoSuchAlgorithmException
     {
         final Map<String, String> serverSchemaLocationsByNamespace = new HashMap<>();
         final Iterator<Element> schema1 = serverSchemas.elementIterator("schema");
@@ -311,14 +309,12 @@ public class EXIFilter extends IoFilterAdapter
             serverSchemaLocationsByNamespace.put(next.attributeValue("ns"), next.attributeValue("schemaLocation"));
         }
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("<?xml version='1.0' encoding='UTF-8'?>"
-            + "\n\n<xs:schema "
-            + "\n\txmlns:xs='http://www.w3.org/2001/XMLSchema'"
-            + "\n\txmlns:stream='http://etherx.jabber.org/streams'"
-            + "\n\txmlns:exi='http://jabber.org/protocol/compress/exi'"
-            + "\n\ttargetNamespace='urn:xmpp:exi:cs'"
-            + "\n\telementFormDefault='qualified'>");
+        final Document canonicalSchema = DocumentHelper.createDocument();
+        final Element root = canonicalSchema.addElement(QName.get("schema", "http://www.w3.org/2001/XMLSchema"));
+        root.addNamespace("stream", "http://etherx.jabber.org/streams");
+        root.addNamespace("exi", "http://jabber.org/protocol/compress/exi");
+        root.addAttribute("targetNamespace", "urn:xmpp:exi:cs");
+        root.addAttribute("elementFormDefault", "qualified");
 
         Element schema;
         for (Iterator<Element> i = setup.elementIterator("schema"); i.hasNext(); ) {
@@ -326,28 +322,24 @@ public class EXIFilter extends IoFilterAdapter
             final String namespace = schema.attributeValue("ns");
             final String schemaLocation = serverSchemaLocationsByNamespace.get(namespace);
 
-            sb.append("\n\t<xs:import namespace='").append(namespace).append("'");
+            final Element importElement = root.addElement("import", "http://www.w3.org/2001/XMLSchema");
+            importElement.addAttribute("namespace", namespace);
             if (schemaLocation != null) {
-                sb.append(" schemaLocation='").append(schemaLocation.replace("/home/guus/SourceCode/IgniteRealtime/openfire-plugins/openfire-exi-plugin/classes/", "../")).append("'");
+                importElement.addAttribute("schemaLocation", schemaLocation);
             }
-            sb.append("/>");
         }
-        sb.append("\n</xs:schema>");
 
-        String content = sb.toString();
-        MessageDigest md;
-        try {
-            md = MessageDigest.getInstance("MD5");
-        } catch (NoSuchAlgorithmException e) {
-            Log.warn("Exception while trying to create canonical schema from a 'setup' received from a client.", e);
-            return null;
+        final MessageDigest md = MessageDigest.getInstance("MD5");
+        final String schemaId = EXIUtils.bytesToHex(md.digest(canonicalSchema.asXML().getBytes()));
+
+        final Path fileName = EXIUtils.exiFolder.resolve(schemaId + ".xsd");
+        try (final FileWriter fileWriter = new FileWriter(fileName.toFile()))
+        {
+            final XMLWriter writer = new XMLWriter(fileWriter, OutputFormat.createPrettyPrint());
+            writer.write(canonicalSchema);
+            writer.close();
         }
-        String schemaId = EXIUtils.bytesToHex(md.digest(content.getBytes()));
-        String fileName = EXIUtils.exiFolder + schemaId + ".xsd";
 
-        BufferedWriter newCanonicalSchemaWriter = new BufferedWriter(new FileWriter(fileName));
-        newCanonicalSchemaWriter.write(content);
-        newCanonicalSchemaWriter.close();
         return schemaId;
     }
 
@@ -407,22 +399,22 @@ public class EXIFilter extends IoFilterAdapter
     void uploadMissingSchema(String content, IoSession session)
         throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException
     {
-        String filePath = EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
-        OutputStream out = Files.newOutputStream(Paths.get(filePath));
-
         content = content.substring(content.indexOf('>') + 1, content.indexOf("</"));
         byte[] outputBytes = Base64.decode(content);
-        out.write(outputBytes);
-        out.close();
 
-        String ns = addNewSchemaToSchemasFile(filePath, null, null);
-        addNewSchemaToCanonicalSchema(filePath, ns, session);
+        final Path filePath = EXIUtils.schemasFolder.resolve(Calendar.getInstance().getTimeInMillis() + ".xsd");
+        try (final OutputStream out = Files.newOutputStream(filePath)) {
+            out.write(outputBytes);
+        }
+
+        addNewSchemaToSchemasFile(filePath, null, null);
+        addNewSchemaToCanonicalSchema(filePath, session);
     }
 
     void uploadCompressedMissingSchema(byte[] content, String contentType, String md5Hash, String bytes, IoSession session)
         throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException
     {
-        String filePath = EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
+        Path filePath = EXIUtils.schemasFolder.resolve(Calendar.getInstance().getTimeInMillis() + ".xsd");
 
         if (!"text".equals(contentType) && md5Hash != null && bytes != null) {
             String xml = "";
@@ -435,8 +427,8 @@ public class EXIFilter extends IoFilterAdapter
             EXIUtils.writeFile(filePath, xml);
         }
 
-        String ns = addNewSchemaToSchemasFile(filePath, md5Hash, bytes);
-        addNewSchemaToCanonicalSchema(filePath, ns, session);
+        addNewSchemaToSchemasFile(filePath, md5Hash, bytes);
+        addNewSchemaToCanonicalSchema(filePath, session);
     }
 
     /**
@@ -445,114 +437,68 @@ public class EXIFilter extends IoFilterAdapter
      * @param fileLocation Location of the file
      * @param md5Hash      md5Hash for the file content for compressed files or null for base64 files
      * @param bytes        number of the file's bytes for compressed files or null for base64 files
-     * @return the namespace of the schema being saved
-     * @throws NoSuchAlgorithmException
-     * @throws IOException
-     * @throws DocumentException
      */
-    static String addNewSchemaToSchemasFile(String fileLocation, String md5Hash, String bytes) throws NoSuchAlgorithmException, IOException, DocumentException
+    static void addNewSchemaToSchemasFile(Path fileLocation, String md5Hash, String bytes) throws NoSuchAlgorithmException, IOException, DocumentException
     {
-        MessageDigest md = MessageDigest.getInstance("MD5");
-        File file = new File(fileLocation);
         if (md5Hash == null || bytes == null) {
-            md5Hash = EXIUtils.bytesToHex(md.digest(FileUtils.readFileToByteArray(file)));
+            final byte[] data = Files.readAllBytes(fileLocation);
+            final byte[] hash = MessageDigest.getInstance("MD5").digest(data);
+            md5Hash = EXIUtils.bytesToHex(hash);
         }
         String ns = EXIUtils.getAttributeValue(EXIUtils.readFile(fileLocation), "targetNamespace");
 
-        // obtener el schemas File del servidor y transformarlo a un elemento XML
-        Element serverSchemas;
-
-        if (!new File(EXIUtils.schemasFileLocation).exists()) {    // no more schemas (only the new one)
-            EXIUtils.writeFile(EXIUtils.schemasFileLocation, "<setupResponse>\n"
-                + "<schema ns='" + ns + "' bytes='" + ((bytes == null) ? file.length() : bytes) + "' md5Hash='" + md5Hash + "' schemaLocation='" + fileLocation + "'/>"
-                + "</setupResponse>");
+        // Create schemas file if it does not exist yet.
+        final Document document;
+        if (!Files.exists(EXIUtils.schemasFileLocation)) {    // no more schemas (only the new one)
+            document = DocumentHelper.createDocument();
+            document.addElement("setupResponse");
+        } else {
+            // obtener el schemas File del servidor y transformarlo a un elemento XML
+            final String content = String.join("", Files.readAllLines(EXIUtils.schemasFileLocation));
+            document = DocumentHelper.parseText(content);
         }
 
-        BufferedReader br = new BufferedReader(new FileReader(EXIUtils.schemasFileLocation));
-        StringBuilder sb = new StringBuilder();
-        String line = br.readLine();
+        final Element newSchema = DocumentHelper.createElement("schema")
+            .addAttribute("ns", ns)
+            .addAttribute("bytes", bytes == null ? String.valueOf(Files.size(fileLocation)) : bytes)
+            .addAttribute("md5Hash", md5Hash)
+            .addAttribute("schemaLocation", fileLocation.toString());
 
-        while (line != null) {
-            sb.append(line);
-            line = br.readLine();
+        // Add new schema to collection of schema's that's in the file.
+        final Element root = document.getRootElement();
+        final List<Element> schemas = root.elements("schema");
+        schemas.add(newSchema);
+
+        // XEP-0322 wants canonical schemas to be ordered by namespace.
+        schemas.sort(Comparator.comparing(element -> element.attributeValue("ns")));
+
+        try (final FileWriter fileWriter = new FileWriter(EXIUtils.schemasFileLocation.toFile()))
+        {
+            final XMLWriter writer = new XMLWriter(fileWriter, OutputFormat.createPrettyPrint());
+            writer.write(document);
+            writer.close();
         }
-        br.close();
-
-        serverSchemas = DocumentHelper.parseText(sb.toString()).getRootElement();
-
-        Element auxSchema;
-        Iterator<Element> j = serverSchemas.elementIterator("schema");
-        int i = 0;    // index where new schema should be (within the list of schemas)
-        while (j.hasNext()) {
-            auxSchema = j.next();
-            if (ns.compareToIgnoreCase(auxSchema.attributeValue("ns")) < 0) {
-                // should be placed in this position
-                break;
-            }
-            i++;    // should raise its position only if it is greater than the lastly compared schema
-        }
-
-        int i2 = 0; // index where new schema should be (within the file)
-        for (int k = -1; k < i; k++) {
-            i2 = sb.indexOf("<schema ", i2 + 1);
-        }
-
-        String schema = "<schema ns='" + ns + "' bytes='" + ((bytes == null) ? file.length() : bytes) + "' md5Hash='" + md5Hash + "' schemaLocation='" + fileLocation + "'/>";
-        if (i2 == -1) {    // should be placed last (no more schemas were found)
-            sb.insert(sb.indexOf("</setup"), schema);
-        } else {    // should be placed before one found in i2
-            sb.insert(i2, schema);
-        }
-
-
-        BufferedWriter schemaWriter = new BufferedWriter(new FileWriter(EXIUtils.schemasFileLocation));
-        schemaWriter.write(sb.toString());
-        schemaWriter.close();
-
-        return ns;
     }
 
-    static void addNewSchemaToCanonicalSchema(String fileLocation, String ns, IoSession session) throws IOException
+    static void addNewSchemaToCanonicalSchema(Path fileLocation, IoSession session) throws IOException, DocumentException
     {
         // obtener el schemas File del servidor y transformarlo a un elemento XML
-        String canonicalSchemaStr = EXIUtils.readFile(EXIUtils.exiFolder + session.getAttribute(EXIUtils.SCHEMA_ID) + ".xsd");
-        StringBuilder canonicalSchemaStrBuilder = new StringBuilder();
-        if (canonicalSchemaStr != null && canonicalSchemaStr.indexOf("namespace") != -1) {
-            canonicalSchemaStrBuilder = new StringBuilder(canonicalSchemaStr);
-            String aux = canonicalSchemaStrBuilder.toString(), importedNamespace = ">";    // importedNamespace makes it possible to start right before 'xs:import' elements
-            int index;
-            do {
-                aux = aux.substring(aux.indexOf(importedNamespace) + importedNamespace.length());
-                importedNamespace = EXIUtils.getAttributeValue(aux, "namespace");
-            } while (importedNamespace != null && ns.compareTo(importedNamespace) > 0 && aux.indexOf("<xs:import ") != -1);
-            index = canonicalSchemaStrBuilder.indexOf(aux.substring(aux.indexOf('>') + 1));
-            canonicalSchemaStrBuilder.insert(index, "\n\t<xs:import namespace='" + ns + "' schemaLocation='" + fileLocation + "'/>");
-        } else {
-            canonicalSchemaStrBuilder = new StringBuilder();
-            canonicalSchemaStrBuilder.append("<?xml version='1.0' encoding='UTF-8'?> \n\n<xs:schema \n\txmlns:xs='http://www.w3.org/2001/XMLSchema' \n\ttargetNamespace='urn:xmpp:exi:cs' \n\txmlns='urn:xmpp:exi:cs' \n\telementFormDefault='qualified'>\n");
-            canonicalSchemaStrBuilder.append("\n\t<xs:import namespace='" + ns + "' schemaLocation='" + fileLocation + "'/>");
-            canonicalSchemaStrBuilder.append("\n</xs:schema>");
-        }
-
-        File canonicalSchema = new File(EXIUtils.exiFolder + session.getAttribute(EXIUtils.SCHEMA_ID) + ".xsd");
-        BufferedWriter canonicalSchemaWriter = new BufferedWriter(new FileWriter(canonicalSchema));
-        canonicalSchemaWriter.write(canonicalSchemaStrBuilder.toString());
-        canonicalSchemaWriter.close();
-
-        session.setAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION, canonicalSchema.getAbsolutePath());
+        final Path canonicalSchema = EXIUtils.exiFolder.resolve(session.getAttribute(EXIUtils.SCHEMA_ID) + ".xsd");
+        EXIUtils.addNewSchemaToCanonicalSchema(canonicalSchema, fileLocation);
+        session.setAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION, canonicalSchema.toAbsolutePath().toString());
     }
 
     /* downloadSchema */
 
     private void saveDownloadedSchema(String content, IoSession session) throws NoSuchAlgorithmException, IOException, DocumentException
     {
-        String filePath = EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
+        Path filePath = EXIUtils.schemasFolder.resolve(Calendar.getInstance().getTimeInMillis() + ".xsd");
 
-        OutputStream out = Files.newOutputStream(Paths.get(filePath));
+        OutputStream out = Files.newOutputStream(filePath);
         out.write(content.getBytes());
         out.close();
 
-        String ns = addNewSchemaToSchemasFile(filePath, null, null);
-        addNewSchemaToCanonicalSchema(filePath, ns, session);
+        addNewSchemaToSchemasFile(filePath, null, null);
+        addNewSchemaToCanonicalSchema(filePath, session);
     }
 }

@@ -24,13 +24,12 @@ import org.apache.mina.core.session.IoSession;
 import org.apache.mina.core.write.WriteRequest;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
-import org.jivesoftware.util.JiveGlobals;
+import org.jivesoftware.openfire.XMPPServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.xml.transform.TransformerException;
 import java.nio.charset.StandardCharsets;
-import java.util.Iterator;
 
 /**
  * This class recognizes EXI Alternative Binding. There is only two possible messages that can be received, otherwise the filter will be eliminated from
@@ -59,9 +58,10 @@ public class EXIAlternativeBindingFilter extends IoFilterAdapter
             IoBuffer bb = (IoBuffer) writeRequest.getMessage();
             String msg = StandardCharsets.UTF_8.decode(((IoBuffer) writeRequest.getMessage()).buf()).toString();
             if (msg.contains("<stream:stream ")) {
-                String open = open(EXIUtils.getAttributeValue(msg, "id"));
-                Log.trace("Encoding {} XMPP characters into EXI bytes for session {}", open.length(), session.hashCode());
-                bb = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(open, true);
+                final Element startStream = EXIUtils.generateStreamStart(EXIUtils.getAttributeValue(msg, "id"), XMPPServer.getInstance().getServerInfo().getXMPPDomain(), true);
+                final String startStreamXml = startStream.asXML();
+                Log.trace("Encoding {} XMPP characters into EXI bytes for session {}", startStreamXml.length(), session.hashCode());
+                bb = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(startStreamXml, true);
                 writeRequest.setMessage(bb);
                 super.filterWrite(nextFilter, session, writeRequest);
 
@@ -168,9 +168,11 @@ public class EXIAlternativeBindingFilter extends IoFilterAdapter
                     if (session.containsAttribute(EXIAlternativeBindingFilter.agreementSentFlag)) {
                         // this is the last open (after receiving setupResponse)
                         ((EXIFilter) session.getFilterChain().get(EXIFilter.filterName)).addCodec(session);
-                        session.write(IoBuffer.wrap(open(null).getBytes()));
+                        final Element startStream = EXIUtils.generateStreamStart(null, XMPPServer.getInstance().getServerInfo().getXMPPDomain(), true);
+                        final String startStreamXml = startStream.asXML();
+                        session.write(IoBuffer.wrap(startStreamXml.getBytes()));
                     } else {
-                        super.messageReceived(nextFilter, session, translateOpen(xml));
+                        super.messageReceived(nextFilter, session, EXIUtils.convertStreamStart(xml));
                     }
                     return;
                 } else if (xml.getName().equals("setup")) {
@@ -202,40 +204,5 @@ public class EXIAlternativeBindingFilter extends IoFilterAdapter
             session.getFilterChain().remove(EXIAlternativeBindingFilter.filterName);
         }
         super.messageReceived(nextFilter, session, message);
-    }
-
-    static String translateOpen(Element open)
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<stream:stream to=\"").append(open.attributeValue("to")).append('\"');
-        sb.append(" version=\"").append(open.attributeValue("version")).append('\"');
-        //sb.append(" xmlns=\"jabber:client xmlns:stream=\"http://etherx.jabber.org/streams\"");
-
-        Element aux;
-        for (Iterator<Element> j = open.elementIterator("xmlns"); j.hasNext(); ) {
-            aux = j.next();
-            sb.append(" xmlns");
-            String prefix = aux.attributeValue("prefix");
-            if (prefix != null && !prefix.equals("")) sb.append(":").append(prefix);
-            sb.append("=\"").append(aux.attributeValue("namespace")).append('\"');
-        }
-        sb.append(">");
-        return sb.toString();
-    }
-
-    static String open(String id)
-    {
-        String hostName = JiveGlobals.getProperty("xmpp.domain", "127.0.0.1").toLowerCase();
-        StringBuilder sb = new StringBuilder();
-        sb.append("<exi:streamStart xmlns:exi='http://jabber.org/protocol/compress/exi'")
-            .append(" version='1.0' from='").append(hostName).append("' xml:lang='en' xmlns:xml='http://www.w3.org/XML/1998/namespace'");
-        if (id != null) {
-            sb.append(" id=\"" + id + "\"");
-        }
-        sb.append("><exi:xmlns prefix='stream' namespace='http://etherx.jabber.org/streams'/>"
-            + "<exi:xmlns prefix='' namespace='jabber:client'/>"
-            + "<exi:xmlns prefix='xml' namespace='http://www.w3.org/XML/1998/namespace'/>"
-            + "</exi:streamStart>");
-        return sb.toString();
     }
 }

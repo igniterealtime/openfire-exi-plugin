@@ -26,8 +26,9 @@ import org.dom4j.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Iterator;
@@ -121,10 +122,10 @@ public class EXISetupConfiguration extends DefaultEXIFactory
         return this.sessionWideBuffers;
     }
 
-    public String getCanonicalSchemaLocation()
+    public Path getCanonicalSchemaLocation()
     {
         if (schemaId != null) {
-            return EXIUtils.exiFolder + schemaId + ".xsd";
+            return EXIUtils.exiFolder.resolve(schemaId + ".xsd");
         } else {
             return EXIUtils.defaultCanonicalSchemaLocation;
         }
@@ -216,8 +217,8 @@ public class EXISetupConfiguration extends DefaultEXIFactory
             Log.warn("Exception while trying to save configuration.", e);
         }
 
-        String fileName = EXIUtils.exiFolder + configurationId + ".xml";
-        if (new File(fileName).exists()) {
+        Path fileName = EXIUtils.exiFolder.resolve(configurationId + ".xml");
+        if (Files.exists(fileName)) {
             return true;
         } else {
             if (EXIUtils.writeFile(fileName, content)) {
@@ -237,7 +238,7 @@ public class EXISetupConfiguration extends DefaultEXIFactory
      */
     public static EXISetupConfiguration parseQuickConfigId(String configId) throws DocumentException
     {
-        String fileLocation = EXIUtils.exiFolder + configId + ".xml";
+        Path fileLocation = EXIUtils.exiFolder.resolve(configId + ".xml");
         String content = EXIUtils.readFile(fileLocation);
         if (content == null)
             return null;
@@ -251,7 +252,7 @@ public class EXISetupConfiguration extends DefaultEXIFactory
             Attribute att = i.next();
             if (att.getName().equals("schemaId")) {
                 exiConfig.setSchemaId(att.getValue());
-                if (!new File(exiConfig.getCanonicalSchemaLocation()).exists()) {
+                if (!Files.exists(exiConfig.getCanonicalSchemaLocation())) {
                     return null;
                 }
             } else if (att.getName().equals("alignment")) {

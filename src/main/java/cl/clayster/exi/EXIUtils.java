@@ -16,9 +16,9 @@
 package cl.clayster.exi;
 
 import org.apache.commons.io.FileUtils;
-import org.dom4j.DocumentException;
-import org.dom4j.DocumentHelper;
-import org.dom4j.Element;
+import org.dom4j.*;
+import org.dom4j.io.OutputFormat;
+import org.dom4j.io.XMLWriter;
 import org.jivesoftware.util.JiveGlobals;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,14 +26,13 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.net.*;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Contains useful methods to execute EXI functions needed by {@link EXIFilter} such as reading a file, getting an attribute from an XML document, among others.
@@ -44,10 +43,10 @@ public class EXIUtils
 {
     private static final Logger Log = LoggerFactory.getLogger(EXIUtils.class);
 
-    final static String schemasFolder = JiveGlobals.getHomeDirectory() + "/plugins/exi/classes/";
-    final static String schemasFileLocation = schemasFolder + "schemas.xml";
-    final static String exiFolder = schemasFolder + "canonicalSchemas/";
-    final static String defaultCanonicalSchemaLocation = exiFolder + "defaultSchema.xsd";
+    static Path schemasFolder = Paths.get(JiveGlobals.getHomeDirectory(), "plugins", "exi", "classes");
+    static Path schemasFileLocation = schemasFolder.resolve("schemas.xml");
+    static Path exiFolder = schemasFolder.resolve("canonicalSchemas");
+    static Path defaultCanonicalSchemaLocation = exiFolder.resolve("defaultSchema.xsd");
     final static String CANONICAL_SCHEMA_LOCATION = "canonicalSchemaLocation";
     final static String EXI_CONFIG = "exiConfig";
     final static String SCHEMA_ID = "schemaId";
@@ -85,22 +84,22 @@ public class EXIUtils
 	    /**/
     }
 
-    public static String readFile(String fileLocation)
+    public static String readFile(Path fileLocation)
     {
         try {
-            return FileUtils.readFileToString(new File(fileLocation));
+            return FileUtils.readFileToString(fileLocation.toFile());
         } catch (IOException e) {
             return null;
         }
     }
 
-    public static boolean writeFile(String fileName, String content)
+    public static boolean writeFile(Path fileName, String content)
     {
         try {
             if (fileName != null && content != null) {
                 FileOutputStream out;
 
-                out = new FileOutputStream(fileName);
+                out = new FileOutputStream(fileName.toFile());
                 out.write(content.getBytes());
                 out.close();
                 return true;
@@ -231,73 +230,54 @@ public class EXIUtils
     static void generateSchemasFile() throws IOException
     {
         try {
-            File folder = new File(EXIUtils.schemasFolder);
-            if (!folder.exists()) {
-                folder.mkdir();
+            Files.createDirectories(EXIUtils.schemasFolder);
+            Files.createDirectories(EXIUtils.exiFolder);
+
+            // Read all XSDs
+            final Set<Path> xsds;
+            try (final Stream<Path> stream = Files.walk(EXIUtils.schemasFolder, 1)) {
+                xsds = stream
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().endsWith(".xsd"))
+                    .collect(Collectors.toSet());
             }
-            if (!new File(EXIUtils.exiFolder).exists()) {
-                new File(EXIUtils.exiFolder).mkdir();
+
+            // Process each XSD.
+            final List<Element> schemaElements = new ArrayList<>();
+            for (final Path xsd : xsds) {
+                final byte[] data = Files.readAllBytes(xsd);
+                final String content = new String(data);
+                final org.dom4j.Document doc = DocumentHelper.parseText(content);
+
+                final byte[] hash = MessageDigest.getInstance("MD5").digest(data);
+                final String md5Hash = EXIUtils.bytesToHex(hash);
+                final String namespace = doc.getRootElement().attributeValue("targetNamespace");
+                final String fileLocation = xsd.toAbsolutePath().toString();
+
+                // schemasStanzas also contains schemaLocation to make it easier to generate a new canonicalSchema later.
+                final Element newSchema = DocumentHelper.createElement("schema")
+                    .addAttribute("ns", namespace)
+                    .addAttribute("bytes", String.valueOf(data.length))
+                    .addAttribute("md5Hash", md5Hash)
+                    .addAttribute("schemaLocation", fileLocation);
+                schemaElements.add(newSchema);
             }
-            File[] listOfFiles = folder.listFiles();
-            File file;
-            String fileLocation;
 
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            InputStream is;
-            DigestInputStream dis;
+            // XEP-0322 wants canonical schemas to be ordered by namespace.
+            schemaElements.sort(Comparator.comparing(element -> element.attributeValue("ns")));
 
-            String namespace = null, md5Hash = null;
-            int r;
+            // Write to file.
+            final Document schemasFile = DocumentHelper.createDocument();
+            final Element schemas = schemasFile.addElement("schemas");
+            schemaElements.forEach(schemas::add);
 
-            // variables to write the stanzas in the right order (namepsace alfabethical order)
-            List<String> namespaces = new ArrayList<>();
-            HashMap<String, String> schemasStanzas = new HashMap<>();
-            int n = 0;
-
-            for (File listOfFile : listOfFiles) {
-                file = listOfFile;
-                if (file.isFile() && file.getName().endsWith(".xsd")) {
-                    // se hace lo siguiente para cada archivo XSD en la carpeta folder
-                    fileLocation = file.getAbsolutePath();
-                    r = 0;
-                    md.reset();
-                    StringBuilder sb = new StringBuilder();
-
-                    is = Files.newInputStream(Paths.get(fileLocation));
-                    dis = new DigestInputStream(is, md);
-
-                    // leer el archivo y guardarlo en sb
-                    while (r != -1) {
-                        r = dis.read();
-                        sb.append((char) r);
-                    }
-
-                    // buscar el namespace del schema
-                    namespace = EXIUtils.getAttributeValue(sb.toString(), "targetNamespace");
-                    md5Hash = EXIUtils.bytesToHex(md.digest());
-
-                    n = 0;
-                    while (n < namespaces.size() &&
-                        namespaces.get(n) != null &&
-                        namespaces.get(n).compareToIgnoreCase(namespace) <= 0) {
-                        n++;
-                    }
-                    namespaces.add(n, namespace);
-                    // schemasStanzas also contains schemaLocation to make it easier to generate a new canonicalSchema later
-                    schemasStanzas.put(namespace, "<schema ns='" + namespace + "' bytes='" + file.length() + "' md5Hash='" + md5Hash + "' schemaLocation='" + fileLocation + "'/>");
-                }
+            try (final FileWriter fileWriter = new FileWriter(EXIUtils.schemasFileLocation.toFile()))
+            {
+                final XMLWriter writer = new XMLWriter(fileWriter, OutputFormat.createPrettyPrint());
+                writer.write(schemasFile);
+                writer.close();
             }
-            //variables to write the schemas files
-            BufferedWriter stanzasWriter = null;
-            stanzasWriter = new BufferedWriter(new FileWriter(EXIUtils.schemasFileLocation));
-
-            stanzasWriter.write("<schemas>");
-            for (String ns : namespaces) {
-                stanzasWriter.write("\n\t" + schemasStanzas.get(ns));
-            }
-            stanzasWriter.write("\n</schemas>");
-            stanzasWriter.close();
-        } catch (NoSuchAlgorithmException e) {
+        } catch (NoSuchAlgorithmException | DocumentException e) {
             Log.warn("Exception while trying to generate schema files.", e);
         }
     }
@@ -351,8 +331,111 @@ public class EXIUtils
 
         String content = sb.toString();
 
-        BufferedWriter newCanonicalSchemaWriter = new BufferedWriter(new FileWriter(EXIUtils.defaultCanonicalSchemaLocation));
+        BufferedWriter newCanonicalSchemaWriter = new BufferedWriter(new FileWriter(EXIUtils.defaultCanonicalSchemaLocation.toFile()));
         newCanonicalSchemaWriter.write(content);
         newCanonicalSchemaWriter.close();
+    }
+
+    public static void addNewSchemaToCanonicalSchema(final Path canoncialSchema, final Path newSchema) throws DocumentException, IOException
+    {
+        final Document canonicalSchema;
+        if (Files.exists(canoncialSchema)) {
+            canonicalSchema = DocumentHelper.parseText(EXIUtils.readFile(canoncialSchema));
+        } else {
+            canonicalSchema = DocumentHelper.createDocument();
+            final Element root = canonicalSchema.addElement(QName.get("schema", "http://www.w3.org/2001/XMLSchema"));
+            root.addAttribute("elementFormDefault", "qualified");
+        }
+
+        final Namespace existingNamespace = canonicalSchema.getRootElement().getNamespaceForURI("http://www.w3.org/2001/XMLSchema");
+
+        final String namespace = EXIUtils.getAttributeValue(EXIUtils.readFile(newSchema), "targetNamespace");
+        canonicalSchema.getRootElement().addElement(QName.get("import", existingNamespace))
+            .addAttribute("namespace", namespace)
+            .addAttribute("schemaLocation", newSchema.toString());
+
+        canonicalSchema.normalize();
+
+        try (final FileWriter fileWriter = new FileWriter(canoncialSchema.toFile()))
+        {
+            final XMLWriter writer = new XMLWriter(fileWriter, OutputFormat.createPrettyPrint());
+            writer.write(canonicalSchema);
+            writer.close();
+        }
+    }
+
+    /**
+     * Generates an EXI 'streamStart' XML element.
+     *
+     * @param id Unknown - does not appear to be defined in the XEP.
+     * @param xmppDomain the XMPP domain that's used as the 'from' attribute value.
+     * @param addXmlNamespaceToRoot true to add a prefix definition for the XML namespace to the generated root element.
+     * @return An XML element of the name 'streamStart'
+     */
+    public static Element generateStreamStart(String id, String xmppDomain, boolean addXmlNamespaceToRoot)
+    {
+        final Element result = DocumentHelper.createElement(QName.get("streamStart","exi", "http://jabber.org/protocol/compress/exi"));
+        if (addXmlNamespaceToRoot) {
+            result.addNamespace(Namespace.XML_NAMESPACE.getPrefix(), Namespace.XML_NAMESPACE.getURI());
+        }
+        result.addAttribute("version", "1.0");
+        result.addAttribute("from", xmppDomain);
+        result.addAttribute(QName.get("lang", Namespace.XML_NAMESPACE), "en");
+        if (id != null) {
+            result.addAttribute("id", id);
+        }
+
+        // These are the XML namespaces and their prefixes that are to be communicated as being available in the stream.
+        final List<Namespace> namespaces = Arrays.asList(
+            Namespace.get("stream", "http://etherx.jabber.org/streams"),
+            Namespace.get("", "jabber:client"),
+            Namespace.get(Namespace.XML_NAMESPACE.getPrefix(), Namespace.XML_NAMESPACE.getURI())
+        );
+
+        for (final Namespace namespace : namespaces) {
+            result.addElement(QName.get("xmlns", "exi", "http://jabber.org/protocol/compress/exi"))
+                .addAttribute("prefix", namespace.getPrefix())
+                .addAttribute("namespace", namespace.getURI());
+        }
+        return result;
+    }
+
+    /**
+     * Translates a 'streamStart' element to a corresponding 'stream' start element.
+     *
+     * The return value will be an unclosed start element.
+     *
+     * @param streamStart the element to convert
+     * @return the converted element as an unclosed start element that is named 'stream'
+     */
+    static String convertStreamStart(final Element streamStart)
+    {
+        // Hard-code the prefix to be 'stream', as some software is rumored to depend on that.
+        final Element stream = DocumentHelper.createElement(QName.get("stream","stream", "http://etherx.jabber.org/streams"));
+        for (final Attribute attribute : streamStart.attributes()) {
+            stream.addAttribute(attribute.getQName(), attribute.getValue());
+        }
+
+        for (final Element xmlnsElement : streamStart.elements("xmlns")) {
+            final String prefix = xmlnsElement.attributeValue("prefix");
+            final String namespace = xmlnsElement.attributeValue("namespace");
+
+            if ("http://etherx.jabber.org/streams".equals(namespace)) {
+                // Skip this namespace - we've hardcoded it to the 'stream' prefix in the root element.
+                continue;
+            }
+
+            stream.addNamespace(prefix, namespace);
+        }
+
+        // Only return the opening element (must not be closed).
+        String result = stream.asXML();
+        if (result.endsWith("</stream:stream>")) {
+            result = result.substring(0, result.length()-"</stream:stream>".length());
+        }
+        if (result.endsWith("/>")) {
+            result = result.substring(0, result.length()-2) + ">";
+        }
+        return result;
     }
 }

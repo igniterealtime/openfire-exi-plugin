@@ -22,6 +22,7 @@ import org.apache.mina.core.session.IoSession;
 import org.apache.mina.core.write.WriteRequest;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
+import org.jivesoftware.openfire.XMPPServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +60,8 @@ public class EXICodecFilter extends IoFilterAdapter
                     msg = "<exi:streamEnd xmlns:exi='http://jabber.org/protocol/compress/exi'/>";
                 }
             } else if (msg.startsWith("<exi:streamStart")) {
-                msg = EXIAlternativeBindingFilter.open(null);
+                final Element startStream = EXIUtils.generateStreamStart(null, XMPPServer.getInstance().getServerInfo().getXMPPDomain(), false);
+                msg = startStream.asXML();
             }
             Log.trace("Encoding {} XMPP characters into EXI bytes for session {}", msg.length(), session.hashCode());
             try {
@@ -103,8 +105,9 @@ public class EXICodecFilter extends IoFilterAdapter
                         Element xml = DocumentHelper.parseText(xmlStr).getRootElement();
                         session.setAttribute("exiBytes", null); // old bytes have been used with the last message
                         if ("streamStart".equals(xml.getName())) {
-                            String open = EXIAlternativeBindingFilter.translateOpen(xml);
-                            session.write(IoBuffer.wrap(EXIAlternativeBindingFilter.open(open).getBytes()));
+                            String open = EXIUtils.convertStreamStart(xml);
+                            final Element startStream = EXIUtils.generateStreamStart(null, XMPPServer.getInstance().getServerInfo().getXMPPDomain(), false);
+                            session.write(IoBuffer.wrap(startStream.asXML().getBytes()));
                             super.messageReceived(nextFilter, session, open);
                             return;
                         } else if ("streamEnd".equals(xml.getName())) {

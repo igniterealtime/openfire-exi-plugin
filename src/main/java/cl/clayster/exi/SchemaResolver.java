@@ -19,60 +19,64 @@ import org.apache.xerces.xni.XMLResourceIdentifier;
 import org.apache.xerces.xni.XNIException;
 import org.apache.xerces.xni.parser.XMLEntityResolver;
 import org.apache.xerces.xni.parser.XMLInputSource;
+import org.dom4j.DocumentException;
+import org.dom4j.DocumentHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class SchemaResolver implements XMLEntityResolver
 {
     private static final Logger Log = LoggerFactory.getLogger(SchemaResolver.class);
 
-    private final Map<String, String> namespaceToPath;
+    private final Map<String, Path> namespaceToPath;
 
-    public SchemaResolver() throws ParserConfigurationException, IOException, SAXException
+    public SchemaResolver() throws ParserConfigurationException, IOException, SAXException, DocumentException
     {
         namespaceToPath = new HashMap<>();
 
         // Iterate over all files to record a namespace-to-path mapping.
-        final File folder = new File(EXIUtils.schemasFolder);
-        if (!folder.isDirectory()) {
+        if (!Files.isDirectory(EXIUtils.schemasFolder)) {
             throw new IllegalStateException("Configured schema folder is not a directory: " + EXIUtils.schemasFolder);
         }
-        final File[] listOfFiles = folder.listFiles();
-        if (listOfFiles == null) {
+
+        final Set<Path> xsds;
+        try (final Stream<Path> stream = Files.walk(EXIUtils.schemasFolder, 1)) {
+            xsds = stream
+                .filter(Files::isRegularFile)
+                .filter(path -> path.getFileName().toString().endsWith(".xsd"))
+                .collect(Collectors.toSet());
+        }
+
+        if (xsds.isEmpty()) {
             throw new IllegalStateException("Configured schema folder contains no files: " + EXIUtils.schemasFolder);
         }
 
-        final DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+        for (final Path xsd : xsds) {
+            final String content = String.join("", Files.readAllLines(xsd));
+            final org.dom4j.Document doc = DocumentHelper.parseText(content);
+            final String namespace = doc.getRootElement().attributeValue("targetNamespace");
 
-        for (final File file : listOfFiles) {
-            if (file.isFile() && file.getName().endsWith(".xsd")) {
-                final String fileLocation = file.getAbsolutePath();
-
-                final Document doc = builder.parse(file);
-                doc.getDocumentElement().normalize();
-                final String namespace = doc.getDocumentElement().getAttribute("targetNamespace");
-
-                Log.debug("Found namespace '{}' in file: {}", namespace, fileLocation);
-                this.namespaceToPath.put(namespace, fileLocation);
-            }
+            Log.debug("Found namespace '{}' in file: {}", namespace, xsd);
+            this.namespaceToPath.put(namespace, xsd);
         }
 
         // Do not use the schema that is defining the schema as content of the schema!
         namespaceToPath.remove("urn:xmpp:exi:cs");
 
         // Add DTDs
-        this.namespaceToPath.put("-//W3C//DTD XMLSCHEMA 200102//EN", new File(EXIUtils.schemasFolder + "XMLSchema.dtd").getAbsolutePath());
-        this.namespaceToPath.put("datatypes", new File(EXIUtils.schemasFolder + "datatypes.dtd").getAbsolutePath());
+        this.namespaceToPath.put("-//W3C//DTD XMLSCHEMA 200102//EN", EXIUtils.schemasFolder.resolve("XMLSchema.dtd"));
+        this.namespaceToPath.put("datatypes", EXIUtils.schemasFolder.resolve("datatypes.dtd"));
     }
 
     public XMLInputSource resolveEntity(XMLResourceIdentifier resourceIdentifier) throws XNIException, IOException
@@ -84,8 +88,8 @@ public class SchemaResolver implements XMLEntityResolver
         XMLInputSource result = null;
         if (needle != null) {
             if (this.namespaceToPath.containsKey(needle)) {
-                String location = this.namespaceToPath.get(needle);
-                result = new XMLInputSource(resourceIdentifier.getPublicId(), location, resourceIdentifier.getBaseSystemId());
+                Path location = this.namespaceToPath.get(needle);
+                result = new XMLInputSource(resourceIdentifier.getPublicId(), location.toAbsolutePath().toString(), resourceIdentifier.getBaseSystemId());
                 //Log.trace("Resolved namespace: '{}' to: {}", needle, result.getSystemId());
             } else {
                 //Log.debug("Unable to resolved namespace: '{}'", needle);

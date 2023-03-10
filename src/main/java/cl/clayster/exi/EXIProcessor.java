@@ -27,6 +27,7 @@ import com.siemens.ct.exi.main.api.sax.EXIResult;
 import com.siemens.ct.exi.main.api.sax.EXISource;
 import com.siemens.ct.exi.main.api.sax.SAXDecoder;
 import org.apache.mina.core.buffer.IoBuffer;
+import org.dom4j.DocumentException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.*;
@@ -61,7 +62,7 @@ public class EXIProcessor
 
         try {
             GrammarFactory grammarFactory = GrammarFactory.newInstance();
-            Grammars g = grammarFactory.createGrammars(exiConfig.getCanonicalSchemaLocation(), new SchemaResolver());
+            Grammars g = grammarFactory.createGrammars(exiConfig.getCanonicalSchemaLocation().toString(), new SchemaResolver());
             exiFactory.setGrammars(g);
             TransformerFactory tf = TransformerFactory.newInstance();
             transformer = tf.newTransformer();
@@ -77,7 +78,7 @@ public class EXIProcessor
             throw new EXIException("Error while creating Grammars.", e);
         } catch (TransformerConfigurationException e) {
             throw new EXIException("Error while creating Transformer.", e);
-        } catch (SAXException e) {
+        } catch (SAXException | DocumentException e) {
             throw new EXIException("Error while creating XML reader.", e);
         }
     }

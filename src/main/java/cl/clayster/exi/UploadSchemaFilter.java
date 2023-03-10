@@ -30,7 +30,7 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
 import java.util.Calendar;
 
@@ -140,7 +140,7 @@ public class UploadSchemaFilter extends IoFilterAdapter
     void uploadCompressedMissingSchema(byte[] content, String contentType, String md5Hash, String bytes, IoSession session)
         throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException
     {
-        String filePath = EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
+        Path filePath = EXIUtils.schemasFolder.resolve(Calendar.getInstance().getTimeInMillis() + ".xsd");
 
         if (!"text".equals(contentType) && md5Hash != null && bytes != null) {
             String xml = "";
@@ -152,15 +152,15 @@ public class UploadSchemaFilter extends IoFilterAdapter
             EXIUtils.writeFile(filePath, xml);
         }
 
-        String ns = EXIFilter.addNewSchemaToSchemasFile(filePath, md5Hash, bytes);
-        EXIFilter.addNewSchemaToCanonicalSchema(filePath, ns, session);
+        EXIFilter.addNewSchemaToSchemasFile(filePath, md5Hash, bytes);
+        EXIFilter.addNewSchemaToCanonicalSchema(filePath, session);
     }
 
     void uploadMissingSchema(String content, IoSession session)
         throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException
     {
-        String filePath = EXIUtils.schemasFolder + Calendar.getInstance().getTimeInMillis() + ".xsd";
-        OutputStream out = Files.newOutputStream(Paths.get(filePath));
+        Path filePath = EXIUtils.schemasFolder.resolve(Calendar.getInstance().getTimeInMillis() + ".xsd");
+        OutputStream out = Files.newOutputStream(filePath);
 
         content = content.substring(content.indexOf('>') + 1, content.indexOf("</"));
         byte[] outputBytes = content.getBytes();
@@ -169,7 +169,7 @@ public class UploadSchemaFilter extends IoFilterAdapter
         out.write(outputBytes);
         out.close();
 
-        String ns = EXIFilter.addNewSchemaToSchemasFile(filePath, null, null);
-        EXIFilter.addNewSchemaToCanonicalSchema(filePath, ns, session);
+        EXIFilter.addNewSchemaToSchemasFile(filePath, null, null);
+        EXIFilter.addNewSchemaToCanonicalSchema(filePath, session);
     }
 }
