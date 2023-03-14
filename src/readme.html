@@ -1,0 +1,94 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+
+<html lang="en">
+<head>
+    <title>EXI Plugin Readme</title>
+    <style type="text/css">
+        BODY {
+            font-size : 100%;
+        }
+        BODY, TD, TH {
+            font-family : tahoma, verdana, arial, helvetica, sans-serif;
+            font-size : 0.8em;
+        }
+        H2 {
+            font-size : 10pt;
+            font-weight : bold;
+        }
+        A:hover {
+            text-decoration : none;
+        }
+        H1 {
+            font-family : tahoma, arial, helvetica, sans-serif;
+            font-size : 1.4em;
+            font-weight: bold;
+            border-bottom : 1px #ccc solid;
+            padding-bottom : 2px;
+        }
+
+        TT {
+            font-family : courier new, monospace;
+            font-weight : bold;
+            color : #060;
+        }
+    </style>
+</head>
+<body>
+
+<h1>
+    EXI Plugin Readme
+</h1>
+
+<h2>Overview</h2>
+
+<p>
+    A plugin for the <a href="https://www.igniterealtime.org/projects/openfire/">Openfire</a> real time collaboration
+    server that implements <a href="https://www.w3.org/TR/exi/">Efficient XML Interchange (EXI)</a> functionality.
+</p>
+
+<p>
+    This plugin provides an XMPP implementation of EXI as defined in <a href="https://xmpp.org/extensions/xep-0322.html">XEP-0322</a>.
+</p>
+
+<h2>Efficient XML Interchange (EXI)</h2>
+
+<p>
+    Efficient XML Interchange (EXI) is a binary XML format for exchange of data on a computer network. It is one of the
+    most prominent efforts to encode XML documents in a binary data format, rather than plain text. Using EXI format
+    reduces the verbosity of XML documents as well as the cost of parsing. Improvements in the performance of writing
+    (generating) content depends on the speed of the medium being written to, the methods and quality of actual
+    implementations.
+</p>
+
+<p>
+    EXI is useful for:
+</p>
+
+<ul>
+    <li>a complete range of XML document sizes, from dozens of bytes to terabytes</li>
+    <li>reducing computational overhead to speed up parsing of compressed documents</li>
+    <li>increasing endurance of small devices by utilizing efficient decompression</li>
+</ul>
+
+<p>
+    Read more about EXI in its <a href="https://en.wikipedia.org/wiki/Efficient_XML_Interchange">Wikipedia article</a>
+    (where the above definition was taken from).
+</p>
+
+<h2>History</h2>
+
+<p>
+    This plugin was first developed by Javier Placencio, in 2013 and 2014. In 2023, that now dormant
+    <a href="https://github.com/javpla/openfire">project</a> was forked by the Ignite Realtime community into this
+    project.
+</p>
+
+<h2>Installation</h2>
+
+<p>
+    Copy exi.jar into the plugins directory of your Openfire installation. The plugin will then be automatically
+    deployed. To upgrade to a new version, copy the new exi.jar file over the existing file.
+</p>
+
+</body>
+</html>
