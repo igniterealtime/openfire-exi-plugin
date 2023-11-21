@@ -9,7 +9,7 @@
     <author>Javier Placencio</author>
 
     <version>${project.version}</version>
-    <date>2023-03-07</date>
+    <date>2023-11-26</date>
     <minServerVersion>4.7.0</minServerVersion>
 
 </plugin>
