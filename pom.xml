@@ -9,7 +9,7 @@
 
     <groupId>org.igniterealtime.openfire.plugins</groupId>
     <artifactId>exi</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1-SNAPSHOT</version>
 
     <name>EXI</name>
     <description>Adds support for XEP-0322: Efficient XML Interchange (EXI) Format</description>
