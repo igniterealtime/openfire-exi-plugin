@@ -180,7 +180,7 @@ public class EXIFilter extends IoFilterAdapter
         try {
             // obtener el schemas File del servidor y transformarlo a un elemento XML
             Element serverSchemas;
-            String schemasFileContent = EXIUtils.readFile(EXIUtils.schemasFileLocation);
+            String schemasFileContent = EXIUtils.readFile(EXIUtils.getSchemasFileLocation());
             if (schemasFileContent == null) {
                 return null;
             }
@@ -332,7 +332,7 @@ public class EXIFilter extends IoFilterAdapter
         final MessageDigest md = MessageDigest.getInstance("MD5");
         final String schemaId = EXIUtils.bytesToHex(md.digest(canonicalSchema.asXML().getBytes()));
 
-        final Path fileName = EXIUtils.exiFolder.resolve(schemaId + ".xsd");
+        final Path fileName = EXIUtils.getExiFolder().resolve(schemaId + ".xsd");
         try (final FileWriter fileWriter = new FileWriter(fileName.toFile()))
         {
             final XMLWriter writer = new XMLWriter(fileWriter, OutputFormat.createPrettyPrint());
@@ -402,7 +402,7 @@ public class EXIFilter extends IoFilterAdapter
         content = content.substring(content.indexOf('>') + 1, content.indexOf("</"));
         byte[] outputBytes = Base64.decode(content);
 
-        final Path filePath = EXIUtils.schemasFolder.resolve(Calendar.getInstance().getTimeInMillis() + ".xsd");
+        final Path filePath = EXIUtils.getSchemasFolder().resolve(Calendar.getInstance().getTimeInMillis() + ".xsd");
         try (final OutputStream out = Files.newOutputStream(filePath)) {
             out.write(outputBytes);
         }
@@ -414,7 +414,7 @@ public class EXIFilter extends IoFilterAdapter
     void uploadCompressedMissingSchema(byte[] content, String contentType, String md5Hash, String bytes, IoSession session)
         throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException
     {
-        Path filePath = EXIUtils.schemasFolder.resolve(Calendar.getInstance().getTimeInMillis() + ".xsd");
+        Path filePath = EXIUtils.getSchemasFolder().resolve(Calendar.getInstance().getTimeInMillis() + ".xsd");
 
         if (!"text".equals(contentType) && md5Hash != null && bytes != null) {
             String xml = "";
@@ -449,12 +449,12 @@ public class EXIFilter extends IoFilterAdapter
 
         // Create schemas file if it does not exist yet.
         final Document document;
-        if (!Files.exists(EXIUtils.schemasFileLocation)) {    // no more schemas (only the new one)
+        if (!Files.exists(EXIUtils.getSchemasFileLocation())) {    // no more schemas (only the new one)
             document = DocumentHelper.createDocument();
             document.addElement("setupResponse");
         } else {
             // obtener el schemas File del servidor y transformarlo a un elemento XML
-            final String content = String.join("", Files.readAllLines(EXIUtils.schemasFileLocation));
+            final String content = String.join("", Files.readAllLines(EXIUtils.getSchemasFileLocation()));
             document = DocumentHelper.parseText(content);
         }
 
@@ -472,7 +472,7 @@ public class EXIFilter extends IoFilterAdapter
         // XEP-0322 wants canonical schemas to be ordered by namespace.
         schemas.sort(Comparator.comparing(element -> element.attributeValue("ns")));
 
-        try (final FileWriter fileWriter = new FileWriter(EXIUtils.schemasFileLocation.toFile()))
+        try (final FileWriter fileWriter = new FileWriter(EXIUtils.getSchemasFileLocation().toFile()))
         {
             final XMLWriter writer = new XMLWriter(fileWriter, OutputFormat.createPrettyPrint());
             writer.write(document);
@@ -483,7 +483,7 @@ public class EXIFilter extends IoFilterAdapter
     static void addNewSchemaToCanonicalSchema(Path fileLocation, IoSession session) throws IOException, DocumentException
     {
         // obtener el schemas File del servidor y transformarlo a un elemento XML
-        final Path canonicalSchema = EXIUtils.exiFolder.resolve(session.getAttribute(EXIUtils.SCHEMA_ID) + ".xsd");
+        final Path canonicalSchema = EXIUtils.getExiFolder().resolve(session.getAttribute(EXIUtils.SCHEMA_ID) + ".xsd");
         EXIUtils.addNewSchemaToCanonicalSchema(canonicalSchema, fileLocation);
         session.setAttribute(EXIUtils.CANONICAL_SCHEMA_LOCATION, canonicalSchema.toAbsolutePath().toString());
     }
@@ -492,7 +492,7 @@ public class EXIFilter extends IoFilterAdapter
 
     private void saveDownloadedSchema(String content, IoSession session) throws NoSuchAlgorithmException, IOException, DocumentException
     {
-        Path filePath = EXIUtils.schemasFolder.resolve(Calendar.getInstance().getTimeInMillis() + ".xsd");
+        Path filePath = EXIUtils.getSchemasFolder().resolve(Calendar.getInstance().getTimeInMillis() + ".xsd");
 
         OutputStream out = Files.newOutputStream(filePath);
         out.write(content.getBytes());

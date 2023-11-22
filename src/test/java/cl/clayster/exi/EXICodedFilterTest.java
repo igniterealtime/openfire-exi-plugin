@@ -48,19 +48,14 @@ import static org.junit.Assert.assertNotNull;
 @RunWith(MockitoJUnitRunner.class)
 public class EXICodedFilterTest
 {
-    private final static Path oldSchemasFolder = EXIUtils.schemasFolder;
-    private final static Path oldSchemasFileLocation = EXIUtils.schemasFileLocation;
-    private final static Path oldExiFolder = EXIUtils.exiFolder;
-    private final static Path oldDefaultCanonicalSchemaLocation = EXIUtils.defaultCanonicalSchemaLocation;
-
     @BeforeClass
     public static void mockFolders() throws Exception {
-        EXIUtils.schemasFolder = Files.createTempDirectory("unit-test-classes-");
+        EXIUtils.setSchemasFolder( Files.createTempDirectory("unit-test-classes-") );
 
         // Copy all content to temp folder
         try (final Stream<Path> stream = Files.walk(Paths.get("classes"))) {
             stream.forEach(source -> {
-                Path destination = EXIUtils.schemasFolder.resolve(source.getFileName());
+                Path destination = EXIUtils.getSchemasFolder().resolve(source.getFileName());
                 try {
                     Files.copy(source, destination);
                 } catch (IOException e) {
@@ -69,20 +64,13 @@ public class EXICodedFilterTest
             });
         }
 
-        EXIUtils.schemasFileLocation = EXIUtils.schemasFolder.resolve("schemas.xml");
-        EXIUtils.exiFolder = EXIUtils.schemasFolder.resolve("canonicalSchemas");
-        EXIUtils.defaultCanonicalSchemaLocation = EXIUtils.exiFolder.resolve("defaultSchema.xsd");
-
         EXIUtils.generateSchemasFile();
         EXIUtils.generateDefaultCanonicalSchema();
     }
 
     @AfterClass
     public static void restoreFolders() {
-        EXIUtils.schemasFolder = oldSchemasFolder;
-        EXIUtils.schemasFileLocation = oldSchemasFileLocation;
-        EXIUtils.exiFolder = oldExiFolder;
-        EXIUtils.defaultCanonicalSchemaLocation = oldDefaultCanonicalSchemaLocation;
+        EXIUtils.setSchemasFolder(null);
     }
 
     /**

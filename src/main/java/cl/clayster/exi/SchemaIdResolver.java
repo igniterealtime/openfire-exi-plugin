@@ -40,7 +40,7 @@ public class SchemaIdResolver implements com.siemens.ct.exi.core.SchemaIdResolve
 			return GrammarFactory.newInstance().createGrammars(EXIUtils.defaultCanonicalSchemaLocation);
 		} else {
 		*/
-        final Path schemaIdPath = EXIUtils.exiFolder.resolve(schemaId + ".xsd");
+        final Path schemaIdPath = EXIUtils.getExiFolder().resolve(schemaId + ".xsd");
         if (Files.exists(schemaIdPath)) {
             try {
                 Log.trace("Found schema file for schema ID '{}'. Using it to populate grammar.", schemaId);
