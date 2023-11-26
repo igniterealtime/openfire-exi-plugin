@@ -125,9 +125,9 @@ public class EXISetupConfiguration extends DefaultEXIFactory
     public Path getCanonicalSchemaLocation()
     {
         if (schemaId != null) {
-            return EXIUtils.exiFolder.resolve(schemaId + ".xsd");
+            return EXIUtils.getExiFolder().resolve(schemaId + ".xsd");
         } else {
-            return EXIUtils.defaultCanonicalSchemaLocation;
+            return EXIUtils.getDefaultCanonicalSchemaLocation();
         }
     }
 
@@ -217,7 +217,7 @@ public class EXISetupConfiguration extends DefaultEXIFactory
             Log.warn("Exception while trying to save configuration.", e);
         }
 
-        Path fileName = EXIUtils.exiFolder.resolve(configurationId + ".xml");
+        Path fileName = EXIUtils.getExiFolder().resolve(configurationId + ".xml");
         if (Files.exists(fileName)) {
             return true;
         } else {
@@ -238,7 +238,7 @@ public class EXISetupConfiguration extends DefaultEXIFactory
      */
     public static EXISetupConfiguration parseQuickConfigId(String configId) throws DocumentException
     {
-        Path fileLocation = EXIUtils.exiFolder.resolve(configId + ".xml");
+        Path fileLocation = EXIUtils.getExiFolder().resolve(configId + ".xml");
         String content = EXIUtils.readFile(fileLocation);
         if (content == null)
             return null;

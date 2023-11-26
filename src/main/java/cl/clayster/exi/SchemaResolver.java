@@ -46,12 +46,12 @@ public class SchemaResolver implements XMLEntityResolver
         namespaceToPath = new HashMap<>();
 
         // Iterate over all files to record a namespace-to-path mapping.
-        if (!Files.isDirectory(EXIUtils.schemasFolder)) {
-            throw new IllegalStateException("Configured schema folder is not a directory: " + EXIUtils.schemasFolder);
+        if (!Files.isDirectory(EXIUtils.getSchemasFolder())) {
+            throw new IllegalStateException("Configured schema folder is not a directory: " + EXIUtils.getSchemasFolder());
         }
 
         final Set<Path> xsds;
-        try (final Stream<Path> stream = Files.walk(EXIUtils.schemasFolder, 1)) {
+        try (final Stream<Path> stream = Files.walk(EXIUtils.getSchemasFolder(), 1)) {
             xsds = stream
                 .filter(Files::isRegularFile)
                 .filter(path -> path.getFileName().toString().endsWith(".xsd"))
@@ -59,7 +59,7 @@ public class SchemaResolver implements XMLEntityResolver
         }
 
         if (xsds.isEmpty()) {
-            throw new IllegalStateException("Configured schema folder contains no files: " + EXIUtils.schemasFolder);
+            throw new IllegalStateException("Configured schema folder contains no files: " + EXIUtils.getSchemasFolder());
         }
 
         for (final Path xsd : xsds) {
@@ -75,8 +75,8 @@ public class SchemaResolver implements XMLEntityResolver
         namespaceToPath.remove("urn:xmpp:exi:cs");
 
         // Add DTDs
-        this.namespaceToPath.put("-//W3C//DTD XMLSCHEMA 200102//EN", EXIUtils.schemasFolder.resolve("XMLSchema.dtd"));
-        this.namespaceToPath.put("datatypes", EXIUtils.schemasFolder.resolve("datatypes.dtd"));
+        this.namespaceToPath.put("-//W3C//DTD XMLSCHEMA 200102//EN", EXIUtils.getSchemasFolder().resolve("XMLSchema.dtd"));
+        this.namespaceToPath.put("datatypes", EXIUtils.getSchemasFolder().resolve("datatypes.dtd"));
     }
 
     public XMLInputSource resolveEntity(XMLResourceIdentifier resourceIdentifier) throws XNIException, IOException

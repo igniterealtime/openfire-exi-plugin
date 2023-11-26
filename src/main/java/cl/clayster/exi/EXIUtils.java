@@ -43,16 +43,51 @@ public class EXIUtils
 {
     private static final Logger Log = LoggerFactory.getLogger(EXIUtils.class);
 
-    static Path schemasFolder = Paths.get(JiveGlobals.getHomeDirectory(), "plugins", "exi", "classes");
-    static Path schemasFileLocation = schemasFolder.resolve("schemas.xml");
-    static Path exiFolder = schemasFolder.resolve("canonicalSchemas");
-    static Path defaultCanonicalSchemaLocation = exiFolder.resolve("defaultSchema.xsd");
+    private static Path schemasFolder;
+    private static Path schemasFileLocation ;
+    private static Path exiFolder;
+    private static Path defaultCanonicalSchemaLocation;
     final static String CANONICAL_SCHEMA_LOCATION = "canonicalSchemaLocation";
     final static String EXI_CONFIG = "exiConfig";
     final static String SCHEMA_ID = "schemaId";
     final static String EXI_PROCESSOR = EXIProcessor.class.getName();
 
     final protected static char[] hexArray = "0123456789abcdef".toCharArray();
+
+    synchronized static Path getSchemasFolder() {
+        if (schemasFolder == null) {
+            schemasFolder = Paths.get(JiveGlobals.getHomeDirectory(), "plugins", "exi", "classes");
+        }
+        return schemasFolder;
+    }
+
+    synchronized static void setSchemasFolder(Path folder) {
+        schemasFolder = folder;
+        schemasFileLocation = null;
+        exiFolder = null;
+        defaultCanonicalSchemaLocation = null;
+    }
+
+    synchronized static Path getSchemasFileLocation() {
+        if (schemasFileLocation == null) {
+            schemasFileLocation = getSchemasFolder().resolve("schemas.xml");
+        }
+        return schemasFileLocation;
+    }
+
+    synchronized static Path getExiFolder() {
+        if (exiFolder == null) {
+            exiFolder = getSchemasFolder().resolve("canonicalSchemas");
+        }
+        return exiFolder;
+    }
+
+    synchronized static Path getDefaultCanonicalSchemaLocation() {
+        if (defaultCanonicalSchemaLocation == null) {
+            defaultCanonicalSchemaLocation = getExiFolder().resolve("defaultSchema.xsd");
+        }
+        return defaultCanonicalSchemaLocation;
+    }
 
     /**
      * Returns a hexadecimal String representation of the given bytes.
@@ -230,12 +265,12 @@ public class EXIUtils
     static void generateSchemasFile() throws IOException
     {
         try {
-            Files.createDirectories(EXIUtils.schemasFolder);
-            Files.createDirectories(EXIUtils.exiFolder);
+            Files.createDirectories(EXIUtils.getSchemasFolder());
+            Files.createDirectories(EXIUtils.getExiFolder());
 
             // Read all XSDs
             final Set<Path> xsds;
-            try (final Stream<Path> stream = Files.walk(EXIUtils.schemasFolder, 1)) {
+            try (final Stream<Path> stream = Files.walk(EXIUtils.getSchemasFolder(), 1)) {
                 xsds = stream
                     .filter(Files::isRegularFile)
                     .filter(path -> path.getFileName().toString().endsWith(".xsd"))
@@ -271,7 +306,7 @@ public class EXIUtils
             final Element schemas = schemasFile.addElement("schemas");
             schemaElements.forEach(schemas::add);
 
-            try (final FileWriter fileWriter = new FileWriter(EXIUtils.schemasFileLocation.toFile()))
+            try (final FileWriter fileWriter = new FileWriter(EXIUtils.getSchemasFileLocation().toFile()))
             {
                 final XMLWriter writer = new XMLWriter(fileWriter, OutputFormat.createPrettyPrint());
                 writer.write(schemasFile);
@@ -291,7 +326,7 @@ public class EXIUtils
         boolean[] schemasFound = {false, false};
         Element setup;
         try {
-            setup = DocumentHelper.parseText(EXIUtils.readFile(EXIUtils.schemasFileLocation)).getRootElement();
+            setup = DocumentHelper.parseText(EXIUtils.readFile(EXIUtils.getSchemasFileLocation())).getRootElement();
         } catch (DocumentException e) {
             Log.warn("Exception while trying to generate default canonical schema.", e);
             return;
@@ -331,7 +366,7 @@ public class EXIUtils
 
         String content = sb.toString();
 
-        BufferedWriter newCanonicalSchemaWriter = new BufferedWriter(new FileWriter(EXIUtils.defaultCanonicalSchemaLocation.toFile()));
+        BufferedWriter newCanonicalSchemaWriter = new BufferedWriter(new FileWriter(EXIUtils.getDefaultCanonicalSchemaLocation().toFile()));
         newCanonicalSchemaWriter.write(content);
         newCanonicalSchemaWriter.close();
     }

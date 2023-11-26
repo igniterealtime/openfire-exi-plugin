@@ -140,7 +140,7 @@ public class UploadSchemaFilter extends IoFilterAdapter
     void uploadCompressedMissingSchema(byte[] content, String contentType, String md5Hash, String bytes, IoSession session)
         throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException
     {
-        Path filePath = EXIUtils.schemasFolder.resolve(Calendar.getInstance().getTimeInMillis() + ".xsd");
+        Path filePath = EXIUtils.getSchemasFolder().resolve(Calendar.getInstance().getTimeInMillis() + ".xsd");
 
         if (!"text".equals(contentType) && md5Hash != null && bytes != null) {
             String xml = "";
@@ -159,7 +159,7 @@ public class UploadSchemaFilter extends IoFilterAdapter
     void uploadMissingSchema(String content, IoSession session)
         throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException
     {
-        Path filePath = EXIUtils.schemasFolder.resolve(Calendar.getInstance().getTimeInMillis() + ".xsd");
+        Path filePath = EXIUtils.getSchemasFolder().resolve(Calendar.getInstance().getTimeInMillis() + ".xsd");
         OutputStream out = Files.newOutputStream(filePath);
 
         content = content.substring(content.indexOf('>') + 1, content.indexOf("</"));
