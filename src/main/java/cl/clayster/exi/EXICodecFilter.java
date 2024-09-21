@@ -30,7 +30,8 @@ import javax.xml.transform.TransformerException;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Decodes EXI stanzas from a specific IoSession, it stores the JID address of the respective user, allowing to easily relate both sessions
@@ -52,7 +53,7 @@ public class EXICodecFilter extends IoFilterAdapter
         String msg;
         if (writeRequest.getMessage() instanceof IoBuffer) {
             final ByteBuffer bytes = ((IoBuffer) writeRequest.getMessage()).buf();
-            msg = StandardCharsets.UTF_8.decode(bytes).toString();
+            msg = UTF_8.decode(bytes).toString();
             if (msg.startsWith("</stream:stream>")) {
                 if (session.containsAttribute(EXIAlternativeBindingFilter.flag)) {
                     msg = "<streamEnd xmlns:exi='http://jabber.org/protocol/compress/exi'/>";

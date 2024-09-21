@@ -25,13 +25,13 @@ import javax.xml.transform.TransformerException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.CharBuffer;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.Calendar;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * This class is used to process <uploadSchema> stanzas, which carry a schema that will be used for the compression that is being negotiated.
@@ -59,8 +59,7 @@ public class UploadSchemaFilter extends IoFilterAdapter
         if (message instanceof IoBuffer) {
             IoBuffer byteBuffer = (IoBuffer) message;
             // Decode buffer
-            Charset encoder = StandardCharsets.UTF_8;
-            CharBuffer charBuffer = encoder.decode(byteBuffer.buf());
+            CharBuffer charBuffer = UTF_8.decode(byteBuffer.buf());
             byte[] bba = byteBuffer.array();
 
             String cont = (String) session.getAttribute("cont");
@@ -130,7 +129,7 @@ public class UploadSchemaFilter extends IoFilterAdapter
                 }
                 msg = cont;
                 bba = baCont;
-            } while (!cont.equals(""));
+            } while (!cont.isEmpty());
         }
         // Pass the message to the next filter
         super.messageReceived(nextFilter, session, message);

@@ -39,6 +39,8 @@ import javax.xml.transform.sax.SAXSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.*;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 public class EXIProcessor
 {
     private static final Logger Log = LoggerFactory.getLogger(EXIProcessor.class);
@@ -129,7 +131,7 @@ public class EXIProcessor
         ByteArrayOutputStream xmlDecoded = new ByteArrayOutputStream();
         transformer.transform(exiSource, new StreamResult(xmlDecoded));
 
-        return xmlDecoded.toString("UTF-8");
+        return xmlDecoded.toString(UTF_8);
     }
 
     /**
@@ -214,7 +216,7 @@ public class EXIProcessor
         ByteArrayOutputStream xmlDecoded = new ByteArrayOutputStream();
         transformer.transform(exiSource, new StreamResult(xmlDecoded));
 
-        return xmlDecoded.toString("UTF-8");
+        return xmlDecoded.toString(UTF_8);
     }
 
     /**
@@ -277,7 +279,7 @@ public class EXIProcessor
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         transformer.transform(exiSource, new StreamResult(baos));
 
-        return baos.toString("UTF-8");
+        return baos.toString(UTF_8);
     }
 
     /**
@@ -295,7 +297,7 @@ public class EXIProcessor
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         transformer.transform(exiSource, new StreamResult(baos));
 
-        return baos.toString("UTF-8");
+        return baos.toString(UTF_8);
     }
 
     /**
@@ -313,6 +315,6 @@ public class EXIProcessor
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         transformer.transform(exiSource, new StreamResult(baos));
 
-        return baos.toString("UTF-8");
+        return baos.toString(UTF_8);
     }
 }

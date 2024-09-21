@@ -35,12 +35,13 @@ import javax.xml.transform.TransformerException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * This class is a filter that recognizes EXI sessions and adds an EXIEncoder and an EXIDecoder to those sessions.
@@ -65,7 +66,7 @@ public class EXIFilter extends IoFilterAdapter
         //"<failure xmlns='http://jabber.org/protocol/compress'><unsupported-method/></failure>"
         if (writeRequest.getMessage() instanceof IoBuffer) {
             int currentPos = ((IoBuffer) writeRequest.getMessage()).position();
-            String msg = StandardCharsets.UTF_8.decode(((IoBuffer) writeRequest.getMessage()).buf()).toString();
+            String msg = UTF_8.decode(((IoBuffer) writeRequest.getMessage()).buf()).toString();
             ((IoBuffer) writeRequest.getMessage()).position(currentPos);
             if (session.containsAttribute(setupReceived) && msg.contains("http://jabber.org/protocol/compress") && msg.contains("unsupported-method")) {
                 return;
