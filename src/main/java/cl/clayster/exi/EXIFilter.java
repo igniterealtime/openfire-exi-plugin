@@ -24,7 +24,6 @@ import org.apache.mina.core.filterchain.IoFilterAdapter;
 import org.apache.mina.core.filterchain.IoFilterChain;
 import org.apache.mina.core.session.IoSession;
 import org.apache.mina.core.write.WriteRequest;
-import org.apache.xerces.impl.dv.util.Base64;
 import org.dom4j.*;
 import org.dom4j.io.OutputFormat;
 import org.dom4j.io.XMLWriter;
@@ -400,7 +399,7 @@ public class EXIFilter extends IoFilterAdapter
         throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException
     {
         String contentB64 = content.substring(content.indexOf('>') + 1, content.indexOf("</"));
-        byte[] outputBytes = Base64.decode(contentB64);
+        byte[] outputBytes = Base64.getDecoder().decode(contentB64);
 
         final Path filePath = EXIUtils.getSchemasFolder().resolve(Calendar.getInstance().getTimeInMillis() + ".xsd");
         try (final OutputStream out = Files.newOutputStream(filePath)) {
