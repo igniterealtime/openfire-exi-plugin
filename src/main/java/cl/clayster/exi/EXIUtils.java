@@ -214,7 +214,7 @@ public class EXIUtils
     }
 
     /**
-     * Returns the index within <code>data</code> of the first occurence of <code>pattern</code>.
+     * Returns the index within <code>data</code> of the first occurrence of <code>pattern</code>.
      *
      * @param data    the byte[] where to look for the pattern
      * @param pattern the pattern to look for within data
@@ -371,11 +371,11 @@ public class EXIUtils
         newCanonicalSchemaWriter.close();
     }
 
-    public static void addNewSchemaToCanonicalSchema(final Path canoncialSchema, final Path newSchema) throws DocumentException, IOException
+    public static void addNewSchemaToCanonicalSchema(final Path canonicalSchemaPath, final Path newSchema) throws DocumentException, IOException
     {
         final Document canonicalSchema;
-        if (Files.exists(canoncialSchema)) {
-            canonicalSchema = DocumentHelper.parseText(EXIUtils.readFile(canoncialSchema));
+        if (Files.exists(canonicalSchemaPath)) {
+            canonicalSchema = DocumentHelper.parseText(EXIUtils.readFile(canonicalSchemaPath));
         } else {
             canonicalSchema = DocumentHelper.createDocument();
             final Element root = canonicalSchema.addElement(QName.get("schema", "http://www.w3.org/2001/XMLSchema"));
@@ -391,7 +391,7 @@ public class EXIUtils
 
         canonicalSchema.normalize();
 
-        try (final FileWriter fileWriter = new FileWriter(canoncialSchema.toFile()))
+        try (final FileWriter fileWriter = new FileWriter(canonicalSchemaPath.toFile()))
         {
             final XMLWriter writer = new XMLWriter(fileWriter, OutputFormat.createPrettyPrint());
             writer.write(canonicalSchema);
