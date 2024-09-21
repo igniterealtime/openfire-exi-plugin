@@ -50,23 +50,26 @@ public class EXICodecFilter extends IoFilterAdapter
     @Override
     public void filterWrite(NextFilter nextFilter, IoSession session, WriteRequest writeRequest) throws Exception
     {
-        String msg;
         if (writeRequest.getMessage() instanceof IoBuffer) {
             final ByteBuffer bytes = ((IoBuffer) writeRequest.getMessage()).buf();
-            msg = UTF_8.decode(bytes).toString();
+            final String msg = UTF_8.decode(bytes).toString();
+            final String outputMsg;
             if (msg.startsWith("</stream:stream>")) {
                 if (session.containsAttribute(EXIAlternativeBindingFilter.flag)) {
-                    msg = "<streamEnd xmlns:exi='http://jabber.org/protocol/compress/exi'/>";
+                    outputMsg = "<streamEnd xmlns:exi='http://jabber.org/protocol/compress/exi'/>";
                 } else {
-                    msg = "<exi:streamEnd xmlns:exi='http://jabber.org/protocol/compress/exi'/>";
+                    outputMsg = "<exi:streamEnd xmlns:exi='http://jabber.org/protocol/compress/exi'/>";
                 }
             } else if (msg.startsWith("<exi:streamStart")) {
                 final Element startStream = EXIUtils.generateStreamStart(null, XMPPServer.getInstance().getServerInfo().getXMPPDomain(), false);
-                msg = startStream.asXML();
+                outputMsg = startStream.asXML();
+            } else {
+                outputMsg = msg;
             }
-            Log.trace("Encoding {} XMPP characters into EXI bytes for session {}", msg.length(), session.hashCode());
+            Log.trace("Encoding {} XMPP characters into EXI bytes for session {}", outputMsg.length(), session.hashCode());
             try {
-                IoBuffer bb = ((EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR)).encodeByteBuffer(msg);
+                EXIProcessor attribute = (EXIProcessor) session.getAttribute(EXIUtils.EXI_PROCESSOR);
+                IoBuffer bb = attribute.encodeByteBuffer(outputMsg);
                 writeRequest.setMessage(bb);
                 super.filterWrite(nextFilter, session, writeRequest);
                 return;
