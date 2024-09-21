@@ -19,10 +19,8 @@ import com.siemens.ct.exi.core.exceptions.EXIException;
 import org.apache.mina.core.buffer.IoBuffer;
 import org.apache.mina.core.filterchain.IoFilterAdapter;
 import org.apache.mina.core.session.IoSession;
-import org.apache.xerces.impl.dv.util.Base64;
 import org.dom4j.DocumentException;
 import org.xml.sax.SAXException;
-
 import javax.xml.transform.TransformerException;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -32,6 +30,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.Calendar;
 
 /**
@@ -164,7 +163,7 @@ public class UploadSchemaFilter extends IoFilterAdapter
 
         String contentB64 = content.substring(content.indexOf('>') + 1, content.indexOf("</"));
 
-        byte[] outputBytes = Base64.decode(contentB64);
+        byte[] outputBytes = Base64.getDecoder().decode(contentB64);
         out.write(outputBytes);
         out.close();
 
