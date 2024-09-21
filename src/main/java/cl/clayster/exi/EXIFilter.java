@@ -105,33 +105,33 @@ public class EXIFilter extends IoFilterAdapter
             } else if ("downloadSchema".equals(xml.getName())) {
                 String url = xml.attributeValue("null", "url");
                 if (url != null) {
-                    String respuesta = "";
+                    String response = "";
                     try {
-                        String descarga = EXIUtils.downloadXml(url);
-                        if (descarga.startsWith("<downloadSchemaResponse ")) {
+                        String download = EXIUtils.downloadXml(url);
+                        if (download.startsWith("<downloadSchemaResponse ")) {
                             // error already found during download process
-                            respuesta = descarga;
+                            response = download;
                         } else {    // SUCCESS!
-                            saveDownloadedSchema(descarga, session);
-                            respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url + "' result='true'/>";
+                            saveDownloadedSchema(download, session);
+                            response = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url + "' result='true'/>";
                         }
                     } catch (
                         DocumentException e) {    // error while parsing the just saved file, not probable (exception makes sense while uploading)
-                        respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url
+                        response = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url
                             + "' result='false'><invalidContentType contentTypeReturned='text/html'/></downloadSchemaResponse>";
                     } catch (Exception e) {
-                        respuesta = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url
+                        response = "<downloadSchemaResponse xmlns='http://jabber.org/protocol/compress/exi' url='" + url
                             + "' result='false'><error message='No free space left.'/></downloadSchemaResponse>";
                     }
-                    session.write(IoBuffer.wrap((respuesta).getBytes()));
+                    session.write(IoBuffer.wrap((response).getBytes()));
                     return;
                 }
             } else if ("compress".equals(xml.getName()) && "exi".equals(xml.elementText("method"))) {
                 EXIProcessor exiProcessor = createExiProcessor(session);
                 if (exiProcessor != null) {
                     session.setAttribute(EXIUtils.EXI_PROCESSOR, exiProcessor);
-                    String respuesta = "<compressed xmlns='http://jabber.org/protocol/compress'/>";
-                    IoBuffer bb = IoBuffer.wrap(respuesta.getBytes());
+                    String response = "<compressed xmlns='http://jabber.org/protocol/compress'/>";
+                    IoBuffer bb = IoBuffer.wrap(response.getBytes());
                     session.write(bb);
                     addCodec(session);
                 } else {
@@ -278,7 +278,7 @@ public class EXIFilter extends IoFilterAdapter
                 session.setAttribute(EXIUtils.EXI_CONFIG, exiConfig);
                 session.setAttribute(EXIUtils.SCHEMA_ID, configId);    // still necessary for uploading schemas with UploadSchemaFilter
                 exiConfig.saveConfiguration();
-                setup.addAttribute("configurationId", exiConfig.getConfigutarionId());
+                setup.addAttribute("configurationId", exiConfig.getConfigurationId());
             }
             setup.addAttribute("agreement", String.valueOf(agreement));
             setup.setName("setupResponse");

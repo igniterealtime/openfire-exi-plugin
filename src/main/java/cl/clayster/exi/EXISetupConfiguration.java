@@ -34,7 +34,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Iterator;
 
 /**
- * Contains all relevant values to setup an EXI compression, in order to propose them to the server.
+ * Contains all relevant values to set up an EXI compression, in order to propose them to the server.
  *
  * @author Javier Placencio
  */
@@ -131,7 +131,7 @@ public class EXISetupConfiguration extends DefaultEXIFactory
         }
     }
 
-    public String getConfigutarionId()
+    public String getConfigurationId()
     {
         return configurationId;
     }
