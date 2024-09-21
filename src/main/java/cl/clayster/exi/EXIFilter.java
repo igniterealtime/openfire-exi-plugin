@@ -399,8 +399,8 @@ public class EXIFilter extends IoFilterAdapter
     void uploadMissingSchema(String content, IoSession session)
         throws IOException, NoSuchAlgorithmException, DocumentException, EXIException, SAXException, TransformerException
     {
-        content = content.substring(content.indexOf('>') + 1, content.indexOf("</"));
-        byte[] outputBytes = Base64.decode(content);
+        String contentB64 = content.substring(content.indexOf('>') + 1, content.indexOf("</"));
+        byte[] outputBytes = Base64.decode(contentB64);
 
         final Path filePath = EXIUtils.getSchemasFolder().resolve(Calendar.getInstance().getTimeInMillis() + ".xsd");
         try (final OutputStream out = Files.newOutputStream(filePath)) {

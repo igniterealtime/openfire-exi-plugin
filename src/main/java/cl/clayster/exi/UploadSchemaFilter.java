@@ -162,10 +162,9 @@ public class UploadSchemaFilter extends IoFilterAdapter
         Path filePath = EXIUtils.getSchemasFolder().resolve(Calendar.getInstance().getTimeInMillis() + ".xsd");
         OutputStream out = Files.newOutputStream(filePath);
 
-        content = content.substring(content.indexOf('>') + 1, content.indexOf("</"));
-        byte[] outputBytes = content.getBytes();
+        String contentB64 = content.substring(content.indexOf('>') + 1, content.indexOf("</"));
 
-        outputBytes = Base64.decode(content);
+        byte[] outputBytes = Base64.decode(contentB64);
         out.write(outputBytes);
         out.close();
 
