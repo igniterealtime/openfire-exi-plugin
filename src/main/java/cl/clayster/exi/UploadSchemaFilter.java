@@ -110,9 +110,10 @@ public class UploadSchemaFilter extends IoFilterAdapter
                         session.setAttribute("cont", msg);
                         return;
                     }
-                    cont = msg.substring(msg.indexOf(setupEndTag) + setupEndTag.length());
+                    int setupEndTagEndPos = msg.indexOf(setupEndTag) + setupEndTag.length();
+                    cont = msg.substring(setupEndTagEndPos);
                     session.setAttribute("cont", cont);
-                    msg = msg.substring(0, msg.indexOf(setupEndTag) + setupEndTag.length());
+                    msg = msg.substring(0, setupEndTagEndPos);
 
                     session.getFilterChain().remove(filterName);
                     super.messageReceived(nextFilter, session, msg);
