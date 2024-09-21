@@ -87,8 +87,8 @@ public class SchemaResolver implements XMLEntityResolver
         }
         XMLInputSource result = null;
         if (needle != null) {
-            if (this.namespaceToPath.containsKey(needle)) {
-                Path location = this.namespaceToPath.get(needle);
+            Path location = this.namespaceToPath.get(needle);
+            if (location != null) {
                 result = new XMLInputSource(resourceIdentifier.getPublicId(), location.toAbsolutePath().toString(), resourceIdentifier.getBaseSystemId());
                 //Log.trace("Resolved namespace: '{}' to: {}", needle, result.getSystemId());
             } else {
