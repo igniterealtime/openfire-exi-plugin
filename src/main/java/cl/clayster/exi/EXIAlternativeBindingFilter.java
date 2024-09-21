@@ -29,7 +29,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.xml.transform.TransformerException;
-import java.nio.charset.StandardCharsets;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * This class recognizes EXI Alternative Binding. There is only two possible messages that can be received, otherwise the filter will be eliminated from
@@ -56,7 +57,7 @@ public class EXIAlternativeBindingFilter extends IoFilterAdapter
     {
         if (writeRequest.getMessage() instanceof IoBuffer) {
             IoBuffer bb = (IoBuffer) writeRequest.getMessage();
-            String msg = StandardCharsets.UTF_8.decode(((IoBuffer) writeRequest.getMessage()).buf()).toString();
+            String msg = UTF_8.decode(((IoBuffer) writeRequest.getMessage()).buf()).toString();
             if (msg.contains("<stream:stream ")) {
                 final Element startStream = EXIUtils.generateStreamStart(EXIUtils.getAttributeValue(msg, "id"), XMPPServer.getInstance().getServerInfo().getXMPPDomain(), true);
                 final String startStreamXml = startStream.asXML();
