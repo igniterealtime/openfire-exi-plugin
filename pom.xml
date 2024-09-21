@@ -32,7 +32,7 @@
 
     <pluginRepositories>
         <!-- Typically used to retrieve Maven plugins that are used by this project.
-             This apparently is also used to botain the dependencies _used by_ these
+             This apparently is also used to obtain the dependencies _used by_ these
              plugins (such as the openfire-plugin-assembly-descriptor, needed to
              package the project as an Openfire plugin!) -->
         <pluginRepository>
@@ -54,7 +54,7 @@
         <dependency>
             <groupId>com.siemens.ct.exi</groupId>
             <artifactId>exificient</artifactId>
-            <version>1.0.4</version>
+            <version>1.0.7</version>
             <exclusions>
                 <!-- Excluding xerces:xercesImpl:2.12.0, as it includes vulnerabilities. This dependency is replaced by an explicit dependency to a newer version of the library below. -->
                 <exclusion>
@@ -72,7 +72,7 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.13.1</version>
+            <version>4.13.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -84,7 +84,7 @@
         <dependency>
             <groupId>org.xmlunit</groupId>
             <artifactId>xmlunit-core</artifactId>
-            <version>2.9.1</version>
+            <version>2.10.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
