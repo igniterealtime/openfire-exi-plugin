@@ -33,6 +33,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Iterator;
 
+import static com.siemens.ct.exi.core.CodingMode.*;
+import static com.siemens.ct.exi.core.FidelityOptions.*;
+
 /**
  * Contains all relevant values to set up an EXI compression, in order to propose them to the server.
  *
@@ -71,7 +74,7 @@ public class EXISetupConfiguration extends DefaultEXIFactory
         setDefaultValues(this);
 
         try {
-            getFidelityOptions().setFidelity(FidelityOptions.FEATURE_PREFIX, true);
+            getFidelityOptions().setFidelity(FEATURE_PREFIX, true);
         } catch (UnsupportedOption e) {
             Log.warn("Exception while trying to set default values.", e);
         }
@@ -97,19 +100,19 @@ public class EXISetupConfiguration extends DefaultEXIFactory
     public int getAlignmentCode()
     {
         CodingMode cm = getCodingMode();
-        return (cm.equals(CodingMode.BIT_PACKED)) ? 0 :
-            (cm.equals(CodingMode.BYTE_PACKED)) ? 1 :
-                (cm.equals(CodingMode.PRE_COMPRESSION)) ? 2 :
-                    (cm.equals(CodingMode.COMPRESSION)) ? 3 : 0;
+        return (cm.equals(BIT_PACKED)) ? 0 :
+            (cm.equals(BYTE_PACKED)) ? 1 :
+                (cm.equals(PRE_COMPRESSION)) ? 2 :
+                    (cm.equals(COMPRESSION)) ? 3 : 0;
     }
 
     public String getAlignmentString()
     {
         CodingMode cm = getCodingMode();
-        return (cm.equals(CodingMode.BIT_PACKED)) ? "bit-packed" :
-            (cm.equals(CodingMode.BYTE_PACKED)) ? "byte-packed" :
-                (cm.equals(CodingMode.PRE_COMPRESSION)) ? "pre-compression" :
-                    (cm.equals(CodingMode.COMPRESSION)) ? "compression" : "bit-packed";
+        return (cm.equals(BIT_PACKED)) ? "bit-packed" :
+            (cm.equals(BYTE_PACKED)) ? "byte-packed" :
+                (cm.equals(PRE_COMPRESSION)) ? "pre-compression" :
+                    (cm.equals(COMPRESSION)) ? "compression" : "bit-packed";
     }
 
     public void setSessionWideBuffers(boolean sessionWideBuffers)
@@ -150,7 +153,7 @@ public class EXISetupConfiguration extends DefaultEXIFactory
         EXISetupConfiguration def = new EXISetupConfiguration();
         // as attributes
         if (!getCodingMode().equals(def.getCodingMode())) {
-            if (getCodingMode().equals(CodingMode.COMPRESSION)) {
+            if (getCodingMode().equals(COMPRESSION)) {
                 sb.append(" compression='true'");
             } else {
                 sb.append(" alignment='").append(getAlignmentString()).append("'");
@@ -161,24 +164,24 @@ public class EXISetupConfiguration extends DefaultEXIFactory
             if (fo.isStrict()) {
                 sb.append(" strict='true'");
             } else {
-                if (fo.isFidelityEnabled(FidelityOptions.FEATURE_COMMENT)) {
-                    sb.append(" ").append(SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_COMMENT)).append("='true'");
+                if (fo.isFidelityEnabled(FEATURE_COMMENT)) {
+                    sb.append(" ").append(SetupValues.getFidelityOptionString(FEATURE_COMMENT)).append("='true'");
                 }
-                if (fo.isFidelityEnabled(FidelityOptions.FEATURE_DTD)) {
-                    sb.append(" ").append(SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_DTD)).append("='true'");
+                if (fo.isFidelityEnabled(FEATURE_DTD)) {
+                    sb.append(" ").append(SetupValues.getFidelityOptionString(FEATURE_DTD)).append("='true'");
                 }
-                if (fo.isFidelityEnabled(FidelityOptions.FEATURE_LEXICAL_VALUE)) {
-                    sb.append(" ").append(SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_LEXICAL_VALUE)).append("='true'");
+                if (fo.isFidelityEnabled(FEATURE_LEXICAL_VALUE)) {
+                    sb.append(" ").append(SetupValues.getFidelityOptionString(FEATURE_LEXICAL_VALUE)).append("='true'");
                 }
-                if (fo.isFidelityEnabled(FidelityOptions.FEATURE_PI)) {
-                    sb.append(" ").append(SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_PI)).append("='true'");
+                if (fo.isFidelityEnabled(FEATURE_PI)) {
+                    sb.append(" ").append(SetupValues.getFidelityOptionString(FEATURE_PI)).append("='true'");
                 }
-                if (fo.isFidelityEnabled(FidelityOptions.FEATURE_PREFIX)) {
-                    sb.append(" ").append(SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_PREFIX)).append("='true'");
+                if (fo.isFidelityEnabled(FEATURE_PREFIX)) {
+                    sb.append(" ").append(SetupValues.getFidelityOptionString(FEATURE_PREFIX)).append("='true'");
                 }
-                if (fo.isFidelityEnabled(FidelityOptions.FEATURE_SC) &&
-                    !(getCodingMode().equals(CodingMode.PRE_COMPRESSION) || getCodingMode().equals(CodingMode.COMPRESSION))) {
-                    sb.append(" ").append(SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_SC)).append("='true'");
+                if (fo.isFidelityEnabled(FEATURE_SC) &&
+                    !(getCodingMode().equals(PRE_COMPRESSION) || getCodingMode().equals(COMPRESSION))) {
+                    sb.append(" ").append(SetupValues.getFidelityOptionString(FEATURE_SC)).append("='true'");
                 }
             }
         }
@@ -259,7 +262,7 @@ public class EXISetupConfiguration extends DefaultEXIFactory
                 exiConfig.setCodingMode(SetupValues.getCodingMode(att.getValue()));
             } else if (att.getName().equals("compression")) {
                 if ("true".equals(att.getValue())) {
-                    exiConfig.setCodingMode(CodingMode.COMPRESSION);
+                    exiConfig.setCodingMode(COMPRESSION);
                 }
             } else if (att.getName().equals("blockSize")) {
                 exiConfig.setBlockSize(Integer.parseInt(att.getValue()));
@@ -275,18 +278,18 @@ public class EXISetupConfiguration extends DefaultEXIFactory
                 }
             } else
                 try {
-                    if (att.getName().equals(SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_COMMENT)) && "true".equals(att.getValue())) {
-                        exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_COMMENT, true);
-                    } else if (att.getName().equals(SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_DTD)) && "true".equals(att.getValue())) {
-                        exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_DTD, true);
-                    } else if (att.getName().equals(SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_LEXICAL_VALUE)) && "true".equals(att.getValue())) {
-                        exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_LEXICAL_VALUE, true);
-                    } else if (att.getName().equals(SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_PI)) && "true".equals(att.getValue())) {
-                        exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_PI, true);
-                    } else if (att.getName().equals(SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_PREFIX)) && "true".equals(att.getValue())) {
-                        exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_PREFIX, true);
-                    } else if (att.getName().equals(SetupValues.getFidelityOptionString(FidelityOptions.FEATURE_SC)) && "true".equals(att.getValue())) {
-                        exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_SC, true);
+                    if (att.getName().equals(SetupValues.getFidelityOptionString(FEATURE_COMMENT)) && "true".equals(att.getValue())) {
+                        exiConfig.getFidelityOptions().setFidelity(FEATURE_COMMENT, true);
+                    } else if (att.getName().equals(SetupValues.getFidelityOptionString(FEATURE_DTD)) && "true".equals(att.getValue())) {
+                        exiConfig.getFidelityOptions().setFidelity(FEATURE_DTD, true);
+                    } else if (att.getName().equals(SetupValues.getFidelityOptionString(FEATURE_LEXICAL_VALUE)) && "true".equals(att.getValue())) {
+                        exiConfig.getFidelityOptions().setFidelity(FEATURE_LEXICAL_VALUE, true);
+                    } else if (att.getName().equals(SetupValues.getFidelityOptionString(FEATURE_PI)) && "true".equals(att.getValue())) {
+                        exiConfig.getFidelityOptions().setFidelity(FEATURE_PI, true);
+                    } else if (att.getName().equals(SetupValues.getFidelityOptionString(FEATURE_PREFIX)) && "true".equals(att.getValue())) {
+                        exiConfig.getFidelityOptions().setFidelity(FEATURE_PREFIX, true);
+                    } else if (att.getName().equals(SetupValues.getFidelityOptionString(FEATURE_SC)) && "true".equals(att.getValue())) {
+                        exiConfig.getFidelityOptions().setFidelity(FEATURE_SC, true);
                     }
                 } catch (UnsupportedOption e) {
                     Log.warn("Exception while trying to parse quick config ID '{}'", configId, e);
