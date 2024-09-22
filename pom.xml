@@ -13,6 +13,34 @@
 
     <name>EXI</name>
     <description>Adds support for XEP-0322: Efficient XML Interchange (EXI) Format</description>
+    <issueManagement>
+        <system>github</system>
+        <url>https://github.com/igniterealtime/openfire-exi-plugin/issues</url>
+    </issueManagement>
+
+    <scm>
+        <connection>scm:git:https://github.com/igniterealtime/openfire-exi-plugin.git</connection>
+        <developerConnection>scm:git:git@github.com:igniterealtime/openfire-exi-plugin.git</developerConnection>
+        <url>https://github.com/igniterealtime/openfire-exi-plugin</url>
+    </scm>
+    <developers>
+        <developer>
+            <name>Javier Placencio</name>
+            <roles>
+                <role>Original Author</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>Guus der Kinderen</name>
+            <roles>
+                <role>Lead Developer</role>
+            </roles>
+            <email>guus.der.kinderen@gmail.com</email>
+            <timezone>+1</timezone>
+            <organization>Ignite Realtime</organization>
+            <organizationUrl>https://www.igniterealtime.org</organizationUrl>
+        </developer>
+     </developers>
 
     <licenses>
         <license>
