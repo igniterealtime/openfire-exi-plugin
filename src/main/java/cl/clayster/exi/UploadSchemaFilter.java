@@ -34,7 +34,8 @@ import java.util.Calendar;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
- * This class is used to process <uploadSchema> stanzas, which carry a schema that will be used for the compression that is being negotiated.
+ * This class is used to process <uploadSchema> stanzas,
+ * which carry a schema that will be used for the compression that is being negotiated.
  *
  * @author Javier Placencio
  */
