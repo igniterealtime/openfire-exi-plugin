@@ -6,7 +6,7 @@
     <!-- Plugin meta-data -->
     <name>${project.name}</name>
     <description>${project.description}</description>
-    <author>Javier Placencio</author>
+    <author>${project.developers[0].name}</author>
 
     <version>${project.version}</version>
     <date>2023-11-26</date>
