@@ -261,7 +261,7 @@ public class EXISetupConfiguration extends DefaultEXIFactory
             } else if (att.getName().equals("alignment")) {
                 exiConfig.setCodingMode(SetupValues.getCodingMode(att.getValue()));
             } else if (att.getName().equals("compression")) {
-                if ("true".equals(att.getValue())) {
+                if (Boolean.parseBoolean(att.getValue())) {
                     exiConfig.setCodingMode(COMPRESSION);
                 }
             } else if (att.getName().equals("blockSize")) {
@@ -273,22 +273,22 @@ public class EXISetupConfiguration extends DefaultEXIFactory
             } else if (att.getName().equals("sessionWideBuffers")) {
                 exiConfig.setSessionWideBuffers(true);
             } else if (att.getName().equals("strict")) {
-                if ("true".equals(att.getValue())) {
+                if (Boolean.parseBoolean(att.getValue())) {
                     exiConfig.setFidelityOptions(FidelityOptions.createStrict());
                 }
             } else
                 try {
-                    if (att.getName().equals(SetupValues.getFidelityOptionString(FEATURE_COMMENT)) && "true".equals(att.getValue())) {
+                    if (att.getName().equals(SetupValues.getFidelityOptionString(FEATURE_COMMENT)) && Boolean.parseBoolean(att.getValue())) {
                         exiConfig.getFidelityOptions().setFidelity(FEATURE_COMMENT, true);
-                    } else if (att.getName().equals(SetupValues.getFidelityOptionString(FEATURE_DTD)) && "true".equals(att.getValue())) {
+                    } else if (att.getName().equals(SetupValues.getFidelityOptionString(FEATURE_DTD)) && Boolean.parseBoolean(att.getValue())) {
                         exiConfig.getFidelityOptions().setFidelity(FEATURE_DTD, true);
-                    } else if (att.getName().equals(SetupValues.getFidelityOptionString(FEATURE_LEXICAL_VALUE)) && "true".equals(att.getValue())) {
+                    } else if (att.getName().equals(SetupValues.getFidelityOptionString(FEATURE_LEXICAL_VALUE)) && Boolean.parseBoolean(att.getValue())) {
                         exiConfig.getFidelityOptions().setFidelity(FEATURE_LEXICAL_VALUE, true);
-                    } else if (att.getName().equals(SetupValues.getFidelityOptionString(FEATURE_PI)) && "true".equals(att.getValue())) {
+                    } else if (att.getName().equals(SetupValues.getFidelityOptionString(FEATURE_PI)) && Boolean.parseBoolean(att.getValue())) {
                         exiConfig.getFidelityOptions().setFidelity(FEATURE_PI, true);
-                    } else if (att.getName().equals(SetupValues.getFidelityOptionString(FEATURE_PREFIX)) && "true".equals(att.getValue())) {
+                    } else if (att.getName().equals(SetupValues.getFidelityOptionString(FEATURE_PREFIX)) && Boolean.parseBoolean(att.getValue())) {
                         exiConfig.getFidelityOptions().setFidelity(FEATURE_PREFIX, true);
-                    } else if (att.getName().equals(SetupValues.getFidelityOptionString(FEATURE_SC)) && "true".equals(att.getValue())) {
+                    } else if (att.getName().equals(SetupValues.getFidelityOptionString(FEATURE_SC)) && Boolean.parseBoolean(att.getValue())) {
                         exiConfig.getFidelityOptions().setFidelity(FEATURE_SC, true);
                     }
                 } catch (UnsupportedOption e) {
