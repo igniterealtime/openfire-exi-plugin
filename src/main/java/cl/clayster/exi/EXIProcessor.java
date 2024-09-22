@@ -123,7 +123,7 @@ public class EXIProcessor
         SAXSource exiSource = new SAXSource(new InputSource(new ByteArrayInputStream(exi)));
         SAXDecoder saxDecoder = new SAXDecoder(factory);
         try {
-            saxDecoder.setFeature(Constants.W3C_EXI_FEATURE_BODY_ONLY, Boolean.TRUE);
+            saxDecoder.setFeature(Constants.W3C_EXI_FEATURE_BODY_ONLY, true);
         } catch (SAXNotRecognizedException | SAXNotSupportedException e) {
             Log.warn("Exception while trying to decode EXI body using no schema files.", e);
         }
@@ -155,7 +155,7 @@ public class EXIProcessor
 
         exiResult.setOutputStream(osEXI);
         xmlReader.setContentHandler(exiResult.getHandler());
-        xmlReader.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", Boolean.FALSE);    // ignorar DTD externos
+        xmlReader.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);    // ignorar DTD externos
 
         xmlReader.parse(new InputSource(new StringReader(xml)));
 
@@ -189,7 +189,7 @@ public class EXIProcessor
 
         exiResult.setOutputStream(osEXI);
         xmlReader.setContentHandler(exiResult.getHandler());
-        xmlReader.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", Boolean.FALSE);    // ignorar DTD externos
+        xmlReader.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);    // ignorar DTD externos
 
         xmlReader.parse(new InputSource(new StringReader(xml)));
 
