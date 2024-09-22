@@ -41,6 +41,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
+import static com.siemens.ct.exi.core.CodingMode.COMPRESSION;
+import static com.siemens.ct.exi.core.FidelityOptions.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -226,7 +228,7 @@ public class EXIFilter extends IoFilterAdapter
                 } else {
                     aux = setup.attributeValue(SetupValues.COMPRESSION);
                     if (aux != null) {
-                        exiConfig.setCodingMode(CodingMode.COMPRESSION);
+                        exiConfig.setCodingMode(COMPRESSION);
                     }
                 }
                 aux = setup.attributeValue(SetupValues.BLOCK_SIZE);
@@ -236,27 +238,27 @@ public class EXIFilter extends IoFilterAdapter
                 aux = setup.attributeValue(SetupValues.STRICT);
                 try {
                     if (aux != null) {
-                        exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_STRICT, Boolean.parseBoolean(aux));
+                        exiConfig.getFidelityOptions().setFidelity(FEATURE_STRICT, Boolean.parseBoolean(aux));
                     } else {
                         aux = setup.attributeValue(SetupValues.PRESERVE_COMMENTS);
                         if (aux != null) {
-                            exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_COMMENT, Boolean.parseBoolean(aux));
+                            exiConfig.getFidelityOptions().setFidelity(FEATURE_COMMENT, Boolean.parseBoolean(aux));
                         }
                         aux = setup.attributeValue(SetupValues.PRESERVE_DTD);
                         if (aux != null) {
-                            exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_DTD, Boolean.parseBoolean(aux));
+                            exiConfig.getFidelityOptions().setFidelity(FEATURE_DTD, Boolean.parseBoolean(aux));
                         }
                         aux = setup.attributeValue(SetupValues.PRESERVE_LEXICAL);
                         if (aux != null) {
-                            exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_LEXICAL_VALUE, Boolean.parseBoolean(aux));
+                            exiConfig.getFidelityOptions().setFidelity(FEATURE_LEXICAL_VALUE, Boolean.parseBoolean(aux));
                         }
                         aux = setup.attributeValue(SetupValues.PRESERVE_PIS);
                         if (aux != null) {
-                            exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_PI, Boolean.parseBoolean(aux));
+                            exiConfig.getFidelityOptions().setFidelity(FEATURE_PI, Boolean.parseBoolean(aux));
                         }
                         aux = setup.attributeValue(SetupValues.PRESERVE_PREFIXES);
                         if (aux != null) {
-                            exiConfig.getFidelityOptions().setFidelity(FidelityOptions.FEATURE_PREFIX, Boolean.parseBoolean(aux));
+                            exiConfig.getFidelityOptions().setFidelity(FEATURE_PREFIX, Boolean.parseBoolean(aux));
                         }
                     }
                 } catch (UnsupportedOption e) {
