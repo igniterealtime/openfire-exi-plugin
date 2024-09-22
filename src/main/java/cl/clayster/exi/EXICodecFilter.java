@@ -34,8 +34,8 @@ import java.nio.ByteBuffer;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
- * Decodes EXI stanzas from a specific IoSession, it stores the JID address of the respective user, allowing to easily relate both sessions
- * and remove the encoder when the session is closed.
+ * Decodes EXI stanzas from a specific IoSession and stores the JID address of the respective user.
+ * This allows to easily relate both sessions and remove the encoder when the session is closed.
  *
  * @author Javier Placencio
  */

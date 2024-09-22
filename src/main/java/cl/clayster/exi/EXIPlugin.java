@@ -27,6 +27,9 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 
+/**
+ * Main plugin class
+ */
 public class EXIPlugin implements Plugin
 {
     private static final Logger Log = LoggerFactory.getLogger(EXIPlugin.class);

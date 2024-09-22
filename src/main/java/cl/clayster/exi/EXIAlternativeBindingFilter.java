@@ -33,8 +33,10 @@ import javax.xml.transform.TransformerException;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
- * This class recognizes EXI Alternative Binding. There is only two possible messages that can be received, otherwise the filter will be eliminated from
- * the current session. In other words, the alternative binding requires EXI messages from the very start.
+ * This class recognizes EXI Alternative Binding.
+ * There is only two possible messages that can be received,
+ * otherwise the filter will be eliminated from the current session.
+ * In other words, the alternative binding requires EXI messages from the very start.
  *
  * @author Javier Placencio
  */

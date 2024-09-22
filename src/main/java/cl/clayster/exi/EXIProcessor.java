@@ -52,7 +52,8 @@ public class EXIProcessor
     protected XMLReader exiReader, xmlReader;
 
     /**
-     * Constructs an EXI Processor using <b>xsdLocation</b> as the Canonical Schema and the respective parameters in exiConfig for its configuration.
+     * Constructs an EXI Processor using <b>xsdLocation</b> as the Canonical Schema
+     * and the respective parameters in exiConfig for its configuration.
      *
      * @param exiConfig EXISetupConfiguration instance with the necessary EXI options. Default options are used when null
      */
@@ -264,11 +265,11 @@ public class EXIProcessor
     }
 
     /**
-     * <p>Decodes a String from EXI to XML</p>
+     * Decodes a String from EXI to XML
      *
      * @param exiBytes The byte array to decode.
      * @return a character array containing the XML characters
-     * @throws EXIException if it is a not well formed EXI document
+     * @throws EXIException if it is a not well-formed EXI document
      */
     protected String decodeByteArray(byte[] exiBytes) throws IOException, EXIException, TransformerException
     {
@@ -283,11 +284,11 @@ public class EXIProcessor
     }
 
     /**
-     * <p>Decodes a String from EXI to XML</p>
+     * Decodes a String from EXI to XML
      *
      * @param exiIS <code>InputStream</code> to read from.
      * @return a character array containing the XML characters
-     * @throws EXIException if it is a not well formed EXI document
+     * @throws EXIException if it is a not well-formed EXI document
      */
     protected String decode(InputStream exiIS) throws IOException, EXIException, TransformerException
     {
@@ -301,11 +302,11 @@ public class EXIProcessor
     }
 
     /**
-     * <p>Decodes a String from EXI to XML</p>
+     * Decodes a String from EXI to XML
      *
      * @param exiStream <code>InputStream</code> to read from.
      * @return a character array containing the XML characters
-     * @throws EXIException if it is a not well formed EXI document
+     * @throws EXIException if it is a not well-formed EXI document
      */
     protected String decodeByteArray(ByteArrayInputStream exiStream) throws IOException, EXIException, TransformerException
     {

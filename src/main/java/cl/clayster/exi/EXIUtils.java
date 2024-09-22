@@ -35,7 +35,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Contains useful methods to execute EXI functions needed by {@link EXIFilter} such as reading a file, getting an attribute from an XML document, among others.
+ * Contains useful methods to execute EXI functions needed by {@link EXIFilter}
+ * such as reading a file, getting an attribute from an XML document, among others.
  *
  * @author Javier Placencio
  */

@@ -85,7 +85,7 @@ public class EXIFilter extends IoFilterAdapter
     public void messageReceived(NextFilter nextFilter, IoSession session, Object message) throws Exception
     {
         if (message instanceof String) {
-            Element xml = null;
+            Element xml;
             try {
                 xml = DocumentHelper.parseText((String) message).getRootElement();
             } catch (DocumentException e) {
@@ -105,7 +105,7 @@ public class EXIFilter extends IoFilterAdapter
             } else if ("downloadSchema".equals(xml.getName())) {
                 String url = xml.attributeValue("null", "url");
                 if (url != null) {
-                    String response = "";
+                    String response;
                     try {
                         String download = EXIUtils.downloadXml(url);
                         if (download.startsWith("<downloadSchemaResponse ")) {
@@ -146,8 +146,10 @@ public class EXIFilter extends IoFilterAdapter
 
 
     /**
-     * Parses a <setup> stanza sent by the client and generates a corresponding <setupResponse> stanza. It also creates a Configuration ID, which is
-     * a UUID followed by '-'; 1 or 0 depending on the configuration being <b>strict</b> or not; and the <b>block size</b> for the EXI Options to use.
+     * Parses a <setup> stanza sent by the client and generates a corresponding <setupResponse> stanza.
+     * It also creates a Configuration ID, which is a UUID followed by '-';
+     * 1 or 0 depending on the configuration being <b>strict</b> or not;
+     * and the <b>block size</b> for the EXI Options to use.
      *
      * @param setup   A <code>String</code> containing the setup stanza
      * @param session the IoSession that represents the connection to the client
@@ -369,8 +371,8 @@ public class EXIFilter extends IoFilterAdapter
     }
 
     /**
-     * Adds an EXIEncoder as well as an EXIDecoder to the given IoSession. Also removes EXIFilter and EXIAlternativeBindingFilter from this session
-     * if they are contained.
+     * Adds an EXIEncoder as well as an EXIDecoder to the given IoSession.
+     * Also removes EXIFilter and EXIAlternativeBindingFilter from this session if they are contained.
      *
      * @param session the IoSession where the EXI encoder and decoder will be added to.
      */
@@ -432,7 +434,8 @@ public class EXIFilter extends IoFilterAdapter
     }
 
     /**
-     * Saves an uploaded schema to a file. It also processes its md5Hash value and the length in bytes when those parameters are null (for base64 encoded files).
+     * Saves an uploaded schema to a file.
+     * It also processes its md5Hash value and the length in bytes when those parameters are null (for base64 encoded files).
      *
      * @param fileLocation Location of the file
      * @param md5Hash      md5Hash for the file content for compressed files or null for base64 files
