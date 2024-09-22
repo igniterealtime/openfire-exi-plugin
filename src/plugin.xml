@@ -11,5 +11,6 @@
     <version>${project.version}</version>
     <date>2023-11-26</date>
     <minServerVersion>4.7.0</minServerVersion>
+    <priorToServerVersion>4.8.0</priorToServerVersion>
 
 </plugin>
