@@ -132,7 +132,7 @@ public class EXIProcessor
         ByteArrayOutputStream xmlDecoded = new ByteArrayOutputStream();
         transformer.transform(exiSource, new StreamResult(xmlDecoded));
 
-        return xmlDecoded.toString(UTF_8);
+        return xmlDecoded.toString(UTF_8.name());
     }
 
     /**
@@ -217,7 +217,7 @@ public class EXIProcessor
         ByteArrayOutputStream xmlDecoded = new ByteArrayOutputStream();
         transformer.transform(exiSource, new StreamResult(xmlDecoded));
 
-        return xmlDecoded.toString(UTF_8);
+        return xmlDecoded.toString(UTF_8.name());
     }
 
     /**
@@ -280,7 +280,7 @@ public class EXIProcessor
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         transformer.transform(exiSource, new StreamResult(baos));
 
-        return baos.toString(UTF_8);
+        return baos.toString(UTF_8.name());
     }
 
     /**
@@ -298,7 +298,7 @@ public class EXIProcessor
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         transformer.transform(exiSource, new StreamResult(baos));
 
-        return baos.toString(UTF_8);
+        return baos.toString(UTF_8.name());
     }
 
     /**
@@ -316,6 +316,6 @@ public class EXIProcessor
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         transformer.transform(exiSource, new StreamResult(baos));
 
-        return baos.toString(UTF_8);
+        return baos.toString(UTF_8.name());
     }
 }
