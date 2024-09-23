@@ -9,7 +9,7 @@
     <author>${project.developers[0].name}</author>
 
     <version>${project.version}</version>
-    <date>2023-11-26</date>
+    <date>2024-09-23</date>
     <minServerVersion>4.7.0</minServerVersion>
     <priorToServerVersion>4.8.0</priorToServerVersion>
 
